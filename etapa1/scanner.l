@@ -13,28 +13,28 @@ int line_number = 1;
 
 %option yylineno
 
-espaco [ \t\n\r\s]
-alfabetico [a-zA-Z]+
-digito [[:digit:]]
-inteiro [\+\-]?{digito}+
+space [ \t\n\r\s]
+alpha [a-zA-Z]+
+digit [[:digit:]]
+integer [\+\-]?{digit}+
 
-START	"/*"
-END	"*/"
-SIMPLE	[^*]
-COMPLEX	\*/[^/]
+commentstart	"/*"
+commentend	\*+\/
+notbullet [^*]
+bulletwobar \*+[^\*\/]
 
 /*\/\*[^(\*\/)]*\*\/ {}*/
-%x C
+%x mlcomment
 
 %%
 
-{START}	  	{yymore(); BEGIN C;}
-<C>{SIMPLE}	{yymore();}
-<C>{COMPLEX} {yymore();}
-<C>{END}  	{ECHO; BEGIN 0;}
+{commentstart}	  	{BEGIN(mlcomment);}
+<mlcomment>{notbullet}	 {}
+<mlcomment>{bulletwobar} {}
+<mlcomment>{commentend}  {BEGIN(INITIAL);}
 
 (\/\/).* {}
-{espaco} {}
+{space} {}
 \'(?-s:.)?\' { return TK_LIT_CHAR; }
 
 "int" { return TK_PR_INT; }
@@ -59,11 +59,11 @@ COMPLEX	\*/[^/]
 
 "false" { return TK_LIT_FALSE; }
 "true" { return TK_LIT_TRUE; }
-{inteiro} { return TK_LIT_INT; }
-{inteiro}.{digito}+ { return TK_LIT_FLOAT; }
-{inteiro}.{digito}+(e|E){inteiro} { return TK_LIT_FLOAT; }
+{integer} { return TK_LIT_INT; }
+{integer}.{digit}+ { return TK_LIT_FLOAT; }
+{integer}.{digit}+(e|E){integer} { return TK_LIT_FLOAT; }
 
-{alfabetico} { return TK_IDENTIFICADOR; }
+{alpha} { return TK_IDENTIFICADOR; }
 
 [\,\;\:\(\)\{\}\+\-\*\/\%\^\<\>\=\!] { return yytext[0]; }
 
