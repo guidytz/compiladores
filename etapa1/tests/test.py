@@ -1,10 +1,18 @@
 import os
 import subprocess
+import sys
 
 
-def main():
-    inputs = os.listdir(path="inputs")
-    outpus = os.listdir(path="outputs")
+def test_filter(names: list, filter_str: str | None) -> list:
+    if filter_str is None:
+        return names
+    return list(filter(lambda x: x.find(filter_str) != -1, names))
+
+
+def main(args):
+    filter_str = args[1] if len(args) == 2 else None
+    inputs = test_filter(os.listdir(path="inputs"), filter_str)
+    outpus = test_filter(os.listdir(path="outputs"), filter_str)
     assert inputs == outpus
 
     passed_tests = 0
@@ -37,4 +45,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
