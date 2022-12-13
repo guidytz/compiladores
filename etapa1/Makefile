@@ -12,3 +12,4 @@ scanner: scanner.l
 clean:
 	rm *.o
 	rm etapa1
+	rm lex.yy.c
