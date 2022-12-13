@@ -1,0 +1,2 @@
+2 TK_IDENTIFICADOR [test]
+2 TK_LIT_INT [1]

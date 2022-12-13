@@ -1,0 +1,4 @@
+1 TK_PR_THEN [then]
+3 TK_PR_FOR [for]
+4 TK_ESPECIAL [,]
+7 TK_IDENTIFICADOR [ident]
