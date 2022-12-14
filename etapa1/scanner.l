@@ -1,4 +1,4 @@
-/* Nomes Integrantes Grupo */
+/* Integrante: Guilherme Dytz dos Santos */
 %{
 
 #include "tokens.h"
@@ -6,8 +6,6 @@
 int line_number = 1;
 
 %}
-/* \/\*(?s:.)\*\/ {} */
-
 
 %option noyywrap
 
@@ -23,7 +21,6 @@ commentend	\*+\/
 notbullet [^*]
 bulletwobar \*+[^\*\/]
 
-/*\/\*[^(\*\/)]*\*\/ {}*/
 %x mlcomment
 
 %%
@@ -60,8 +57,8 @@ bulletwobar \*+[^\*\/]
 "false" { return TK_LIT_FALSE; }
 "true" { return TK_LIT_TRUE; }
 {integer} { return TK_LIT_INT; }
-{integer}.{digit}+ { return TK_LIT_FLOAT; }
-{integer}.{digit}+(e|E){integer} { return TK_LIT_FLOAT; }
+{integer}\.{digit}+ { return TK_LIT_FLOAT; }
+{integer}\.{digit}+(e|E){integer} { return TK_LIT_FLOAT; }
 
 {alpha} { return TK_IDENTIFICADOR; }
 
