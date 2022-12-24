@@ -16,3 +16,6 @@ lex.yy.c
 
 # Ignore bison generated files
 parser.tab.*
+
+# Ignore vscode settings
+.vscode
