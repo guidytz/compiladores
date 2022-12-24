@@ -13,3 +13,6 @@
 # Ignore .o and lex c file
 *.o
 lex.yy.c
+
+# Ignore bison generated files
+parser.tab.*
