@@ -62,7 +62,7 @@ bulletwobar \*+[^\*\/]
 
 {alpha} { return TK_IDENTIFICADOR; }
 
-[\,\;\:\(\)\{\}\+\-\*\/\%\^\<\>\=\!] { return yytext[0]; }
+[\,\;\:\(\)\{\}\+\-\*\/\%\^\<\>\=\!\[\]] { return yytext[0]; }
 
 . { return TK_ERRO; }
 
