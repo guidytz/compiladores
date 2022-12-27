@@ -2,14 +2,18 @@
 create=$1
 
 if [[ $create == "specials" ]]; then
-    specials=", ; : ( ) { } + - / % ^ < > = !" # falta o '*'
+    specials=", ; : ( ) { } + - / % ^ < > = ! [ ]" # falta o '*'
     count=0
     for ch in $specials; do
         ((++count))
         echo "Creating: $ch"
         echo -n $ch > "inputs/sp${count}.txt"
-        echo -n "1 TK_ESPECIAL [$ch]" > "outputs/sp${count}.txt"
+        echo "1 TK_ESPECIAL [$ch]" > "outputs/sp${count}.txt"
     done
+    ((++count))
+    echo "Creating: *"
+    echo -n "*" > "inputs/sp${count}.txt"
+    echo "1 TK_ESPECIAL [*]" > "outputs/sp${count}.txt"
 fi
 
 if [[ $create == "int" ]]; then

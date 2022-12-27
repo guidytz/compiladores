@@ -53,6 +53,8 @@ int print_token(int token) {
     case '<':
     case '>':
     case '=':
+    case '[':
+    case ']':
     case '!':              print_nome2 (token);               break;
     case TK_PR_INT:        print_nome(_(TK_PR_INT));          break;
     case TK_PR_FLOAT:      print_nome(_(TK_PR_FLOAT));        break;
