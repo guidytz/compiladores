@@ -19,3 +19,6 @@ parser.tab.*
 
 # Ignore vscode settings
 .vscode
+
+# Outros arquivos
+**/old*
