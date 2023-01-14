@@ -1,0 +1,3 @@
+bool notdivdois(int num) {
+    return !divdois(num);
+}
