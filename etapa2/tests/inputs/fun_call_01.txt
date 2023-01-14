@@ -1,0 +1,3 @@
+char fn () {
+    fun(a, b);
+}
