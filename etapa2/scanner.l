@@ -14,7 +14,7 @@ int line_number = 1;
 space [ \t\n\r\s]
 alpha [a-zA-Z]+
 digit [[:digit:]]
-integer [\+\-]?{digit}+
+integer {digit}+
 
 commentstart	"/*"
 commentend	\*+\/
