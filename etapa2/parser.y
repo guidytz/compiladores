@@ -62,7 +62,8 @@ command_block: '{' commands '}' |
 commands: commands command |
           command ;
 
-command: var_declare ';' |
+command: command_block ';' |
+         var_declare ';' |
          attrib ';' |
          fun_call ';' |
          return ';' |
