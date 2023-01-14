@@ -1,0 +1,3 @@
+bool neg(bool val) {
+    return !val;
+}

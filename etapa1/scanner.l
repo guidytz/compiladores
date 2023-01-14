@@ -56,9 +56,9 @@ bulletwobar \*+[^\*\/]
 
 "false" { return TK_LIT_FALSE; }
 "true" { return TK_LIT_TRUE; }
-{integer} { return TK_LIT_INT; }
-{integer}\.{digit}+ { return TK_LIT_FLOAT; }
-{integer}\.{digit}+(e|E){integer} { return TK_LIT_FLOAT; }
+{digit}+ { return TK_LIT_INT; }
+{digit}+\.{digit}+ { return TK_LIT_FLOAT; }
+{digit}+\.{digit}+(e|E){integer} { return TK_LIT_FLOAT; }
 
 {alpha} { return TK_IDENTIFICADOR; }
 

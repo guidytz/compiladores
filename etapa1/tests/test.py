@@ -2,6 +2,16 @@ import os
 import subprocess
 import sys
 
+from colorama import Fore, Style
+
+
+def success(string: str) -> str:
+    return f"{Fore.GREEN}{string}{Style.RESET_ALL}"
+
+
+def fail(string: str) -> str:
+    return f"{Fore.RED}{string}{Style.RESET_ALL}"
+
 
 def test_filter(names: list, filter_str: str | None) -> list:
     if filter_str is None:
@@ -19,7 +29,7 @@ def main(args):
     failed_tests = 0
 
     for input_file, output_file, i in zip(inputs, outpus, range(len(inputs))):
-        print(f"Test {i}")
+        print(f"Test {i} ({Fore.CYAN}{input_file}{Style.RESET_ALL})")
         with open(f"inputs/{input_file}") as file:
             print(f"Input: {file.read()}")
 
@@ -33,15 +43,15 @@ def main(args):
 
             if output_entry == expected:
                 passed_tests += 1
-                print("SUCCESS!\n")
+                print(success("SUCCESS!\n"))
                 continue
 
             failed_tests += 1
-            print("FAIL!")
-            print(f"Expected output: {expected}\n")
+            print(fail("FAIL!"))
+            print(f"Expected output: {expected}")
 
-    print(f"Passed: {passed_tests} tests")
-    print(f"Failed: {failed_tests} tests")
+    print(f"{success('Passed:')} {passed_tests} tests")
+    print(f"{fail('Failed:')} {failed_tests} tests")
 
 
 if __name__ == "__main__":
