@@ -3,7 +3,8 @@ int yylex(void);
 void yyerror (char const *s);
 %}
 
-%define parse.error verbose
+%define parse.lac full
+%define parse.error detailed
 
 %token TK_PR_INT
 %token TK_PR_FLOAT

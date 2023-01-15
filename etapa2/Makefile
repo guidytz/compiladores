@@ -3,7 +3,7 @@ all: parser scanner main
 
 main: main.c
 	gcc main.c -c
-	gcc extra.c -c
+	gcc extra.c -c -Wno-discarded-qualifiers
 
 scanner: parser scanner.l
 	flex scanner.l
