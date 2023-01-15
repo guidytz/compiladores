@@ -1,0 +1,3 @@
+float fn() {
+    return (a+b) * c);
+}

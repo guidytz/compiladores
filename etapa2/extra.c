@@ -24,8 +24,6 @@ char *match(char *word)
 		return "'&&'";
 	if (strcmp(word, "TK_OC_OR") == 0)
 		return "'||'";
-	if (strcmp(word, "TK_IDENTIFICADOR") == 0)
-		return "identifier";
 
 	return word;
 }

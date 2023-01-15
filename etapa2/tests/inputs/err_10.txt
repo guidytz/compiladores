@@ -1,0 +1,6 @@
+bool fn(int a) {
+    if (a <) then {
+        return true;
+    };
+    return false;
+}
