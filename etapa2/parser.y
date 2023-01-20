@@ -1,3 +1,4 @@
+/* Integrante: Guilherme Dytz dos Santos */
 %{
 int yylex(void);
 void yyerror (char const *s);
@@ -70,16 +71,15 @@ command: command_block ';' |
          return ';' |
          flux_ctrl ';' ;
 
-var_declare: var_list ;
+var_declare: type_id ',' var_list |
+             type_id TK_OC_LE literals ',' var_list | // need to confirm
+             type_id |
+             type_id TK_OC_LE literals ;
 
-var_list: type_id ',' var_list |
-          TK_IDENTIFICADOR ',' var_list |
-          TK_IDENTIFICADOR TK_OC_LE literals ',' var_list | // need to confirm
+var_list: TK_IDENTIFICADOR ',' var_list |
+          TK_IDENTIFICADOR TK_OC_LE literals ',' var_list |
           TK_IDENTIFICADOR TK_OC_LE literals |
-          type_id TK_OC_LE literals ',' var_list | // need to confirm
-          type_id TK_OC_LE literals |
-          TK_IDENTIFICADOR |
-          type_id ;
+          TK_IDENTIFICADOR ;
 
 attrib: TK_IDENTIFICADOR '=' expr |
         TK_IDENTIFICADOR '[' exp_list ']' '=' expr ;
