@@ -7,7 +7,7 @@ debug:
 	cp target/debug/etapa3 .
 
 clean:
-	rm -f etapa4 Cargo.lock
+	rm -f etapa3 Cargo.lock
 	rm -f -r target
 
 test:
