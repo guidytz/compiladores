@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 extern int yylineno;
 
@@ -24,7 +25,6 @@ char *match(char *word)
 		return "'&&'";
 	if (strcmp(word, "TK_OC_OR") == 0)
 		return "'||'";
-
 	return word;
 }
 

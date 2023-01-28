@@ -72,7 +72,7 @@ command: command_block ';' |
          flux_ctrl ';' ;
 
 var_declare: type_id ',' var_list |
-             type_id TK_OC_LE literals ',' var_list | // need to confirm
+             type_id TK_OC_LE literals ',' var_list |
              type_id |
              type_id TK_OC_LE literals ;
 
