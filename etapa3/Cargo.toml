@@ -14,3 +14,8 @@ lrpar = "0.13"
 cfgrammar = "0.13.0"
 lrlex = "0.13.0"
 lrpar = "0.13.0"
+
+[features]
+default = ["lex-yacc"]
+only-lex = []
+lex-yacc = []

@@ -1,0 +1,1 @@
+syntax error, unexpected '{', expecting TK_PR_THEN at line 2

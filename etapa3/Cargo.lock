@@ -52,9 +52,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "cfgrammar"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2836ac78906e1f7c9462f161abfb843849d580775a08b62d099f0bca355c915"
+checksum = "f1a6ae4d80de7ec1154cc0ad78b63aafce4dea1c28b94101ab697042d768ad10"
 dependencies = [
  "indexmap",
  "lazy_static",
@@ -168,9 +168,9 @@ checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 
 [[package]]
 name = "lrlex"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5b7775c88626ab4f91de188a14deb71e4149f89efcd8ee3d1b779cad4b946d3"
+checksum = "139466c7000629ac9366297f14137fb25b27a1823865cd000b8a70c092fcb88a"
 dependencies = [
  "cfgrammar",
  "getopts",
@@ -186,9 +186,9 @@ dependencies = [
 
 [[package]]
 name = "lrpar"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceec66ff63c6d3e376acab385dfbd2795ed96e0b834464ec949a51d536d2f1df"
+checksum = "96fb488710f2fb58de7d3f09a19b501b7222aa461ae2607749612bd5bc04cf38"
 dependencies = [
  "bincode",
  "cactus",
@@ -208,9 +208,9 @@ dependencies = [
 
 [[package]]
 name = "lrtable"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f2e2b6439a4ba90b2d55a64bb4aa7c606485218473db67402c45829e1bbcda7"
+checksum = "aa8e2dca0cc90f4137a72e176412644beebeda10fd99a4f94a3e984bda256283"
 dependencies = [
  "cfgrammar",
  "fnv",

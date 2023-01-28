@@ -1,0 +1,6 @@
+int fun() {
+    int a, b;
+    float f;
+    char c;
+    bool ba, bb;
+}

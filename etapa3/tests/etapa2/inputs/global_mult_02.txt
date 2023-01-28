@@ -1,0 +1,3 @@
+int a[2], b[4^3], c;
+bool testa, testb;
+char string[50];

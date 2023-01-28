@@ -1,0 +1,3 @@
+int fn(float a) {
+    fn(int a);
+}

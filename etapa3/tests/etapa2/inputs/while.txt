@@ -1,0 +1,5 @@
+bool loop() {
+    while(true) {
+        a = 1;
+    };
+}

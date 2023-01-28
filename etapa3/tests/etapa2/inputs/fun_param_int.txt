@@ -1,0 +1,1 @@
+bool funname(int a) {}
