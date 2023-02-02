@@ -16,6 +16,17 @@ lrlex = "0.13.0"
 lrpar = "0.13.0"
 
 [features]
-default = ["lex-yacc"]
-only-lex = []
-lex-yacc = []
+default = ["lexparser"]
+onlylex = []
+lexparser = []
+lexparser-input-test = []
+
+[[test]]
+name = "test-etapa2"
+path = "tests/test_etapa2.rs"
+required-features = ["lexparser-input-test"]
+
+[[test]]
+name = "test-etapa1"
+path = "tests/test_etapa1.rs"
+required-features = ["onlylex"]

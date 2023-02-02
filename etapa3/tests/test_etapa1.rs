@@ -15,6 +15,7 @@ mod test {
         for (input, output) in inputs.into_iter().zip(outputs) {
             match (input, output) {
                 (Ok(input), Ok(output)) => {
+                    let input_file_name = input.file_name().to_str().unwrap().to_owned();
                     let input = std::fs::read_to_string(input.path()).unwrap();
                     let expected_output = std::fs::read_to_string(output.path()).unwrap();
                     let lexerdef = scanner_l::lexerdef();
@@ -24,12 +25,8 @@ mod test {
                         match token {
                             Ok(l) => {
                                 let ((line, _), _) = lexer.line_col(l.span());
-                                let token = match &**lexerdef
-                                    .get_rule_by_id(l.tok_id())
-                                    .name
-                                    .as_ref()
-                                    .unwrap()
-                                {
+                                let rule = lexerdef.get_rule_by_id(l.tok_id());
+                                let token = match rule.name.as_deref().unwrap() {
                                     "," | ";" | ":" | "(" | ")" | "{" | "}" | "+" | "-" | "*"
                                     | "/" | "%" | "^" | "<" | ">" | "=" | "!" | "[" | "]" => {
                                         "TK_ESPECIAL"
@@ -52,7 +49,10 @@ mod test {
                             }
                         }
                     }
-                    assert_eq!(expected_output, lexer_output);
+                    assert_eq!(
+                        expected_output, lexer_output,
+                        "with input file '{input_file_name}'",
+                    );
                 }
                 _ => panic!("Something went wrong with entry dirs"),
             }
