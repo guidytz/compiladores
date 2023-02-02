@@ -68,7 +68,7 @@ if: "TK_PR_IF" '(' expr ')' "TK_PR_THEN" command_block  ;
 else: "TK_PR_ELSE" command_block  ;
 while: "TK_PR_WHILE" '(' expr ')' command_block  ;
 
-exp_list: expr '^' exp_list |
+exp_list: exp_list '^' expr |
           expr  ;
 
 expr: or_op  ;
