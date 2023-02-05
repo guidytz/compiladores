@@ -74,45 +74,33 @@ var_declare -> Result<ASTNode, anyhow::Error>:
         type ident "TK_OC_LE" literals ',' var_list {
                 let ident = Box::new($2?);
                 let lit = Box::new($4?);
-                let mut node = LitInit::new($span, ident, lit);
-                match $6? {
-                        ASTNode::None => {}
-                        ASTNode::LitInit(next) => {
-                                let next = Box::new(ASTNode::LitInit(next));
-                                node.add_next(next)
-                        },
-                        _ => bail!("There should be a lit init node here"),
-                }
-                Ok(ASTNode::LitInit(node))
+                let next_init = Box::new($6?);
+                let node = VarInit::new($span, ident, lit, next_init);
+                Ok(ASTNode::VarInit(node))
         } |
         type ident { Ok(ASTNode::None) } |
         type ident "TK_OC_LE" literals {
                 let ident = Box::new($2?);
                 let lit = Box::new($4?);
-                let node = LitInit::new($span, ident, lit);
-                Ok(ASTNode::LitInit(node))
+                let next_init = Box::new(ASTNode::None);
+                let node = VarInit::new($span, ident, lit, next_init);
+                Ok(ASTNode::VarInit(node))
         } ;
 
 var_list -> Result<ASTNode, anyhow::Error>:
         ident "TK_OC_LE" literals ',' var_list {
                 let ident = Box::new($1?);
                 let lit = Box::new($3?);
-                let mut node = LitInit::new($span, ident, lit);
-                match $5? {
-                        ASTNode::None => {}
-                        ASTNode::LitInit(next) => {
-                                let next = Box::new(ASTNode::LitInit(next));
-                                node.add_next(next)
-                        },
-                        _ => bail!("There should be a lit init node here"),
-                }
-                Ok(ASTNode::LitInit(node))
+                let next_init = Box::new($5?);
+                let node = VarInit::new($span, ident, lit, next_init);
+                Ok(ASTNode::VarInit(node))
         } |
         ident "TK_OC_LE" literals {
                 let ident = Box::new($1?);
                 let lit = Box::new($3?);
-                let node = LitInit::new($span, ident, lit);
-                Ok(ASTNode::LitInit(node))
+                let next_init = Box::new(ASTNode::None);
+                let node = VarInit::new($span, ident, lit, next_init);
+                Ok(ASTNode::VarInit(node))
         } |
         ident ',' var_list { $3 } |
         ident { Ok(ASTNode::None) } ;
@@ -134,11 +122,13 @@ attrib -> Result<ASTNode, anyhow::Error>:
 fun_call -> Result<ASTNode, anyhow::Error>:
         ident '(' arg_list ')' {
                 let expr = Box::new($3?);
-                let node = CommFnCall::new($span, Some(expr));
+                let ident = $1?;
+                let node = CommFnCall::new($span, expr, ident.span()?);
                 Ok(ASTNode::CommFnCall(node))
         } |
         ident '(' ')'  {
-                let node = CommFnCall::new($span, None);
+                let ident = $1?;
+                let node = CommFnCall::new($span, Box::new(ASTNode::None), ident.span()?);
                 Ok(ASTNode::CommFnCall(node))
         } ;
 
@@ -162,14 +152,14 @@ flux_ctrl -> Result<ASTNode, anyhow::Error>:
         "TK_PR_IF" '(' expr ')' "TK_PR_THEN" command_block  {
                 let expr = Box::new($3?);
                 let true_fst_comm = Box::new($6?);
-                let node = CommIf::new($span, expr, true_fst_comm, None);
+                let node = CommIf::new($span, expr, true_fst_comm, Box::new(ASTNode::None));
                 Ok(ASTNode::CommIf(node))
         } |
         "TK_PR_IF" '(' expr ')' "TK_PR_THEN" command_block "TK_PR_ELSE" command_block {
                 let expr = Box::new($3?);
                 let true_fst_comm = Box::new($6?);
                 let false_fst_comm = Box::new($8?);
-                let node = CommIf::new($span, expr, true_fst_comm, Some(false_fst_comm));
+                let node = CommIf::new($span, expr, true_fst_comm, false_fst_comm);
                 Ok(ASTNode::CommIf(node))
         } |
         "TK_PR_WHILE" '(' expr ')' command_block  {
@@ -183,15 +173,10 @@ exp_list -> Result<ASTNode, anyhow::Error>:
         exp_list '^' expr {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = ExprIdxNode::new($span, Some(child_left), child_right);
-                Ok(ASTNode::ExprIdxNode(node))
-        } |
-        expr {
-                let child_left = None;
-                let child_right = Box::new($1?);
                 let node = ExprIdxNode::new($span, child_left, child_right);
                 Ok(ASTNode::ExprIdxNode(node))
-        } ;
+        } |
+        expr { $1 } ;
 
 expr -> Result<ASTNode, anyhow::Error>:
         or_op { $1 } ;
@@ -348,7 +333,7 @@ multidim -> Result<ASTNode, anyhow::Error>:
 use etapa3::ast::{
         ASTNode,
         FnDeclare,
-        LitInit,
+        VarInit,
         CommAttrib,
         CommFnCall,
         CommReturn,

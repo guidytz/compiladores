@@ -1,0 +1,5 @@
+int function() {
+    varOne = vartwo[10^20+20^a+b];
+}
+
+bool anotherFunction() {}

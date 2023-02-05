@@ -13,7 +13,10 @@ lrpar_mod!("parser.y");
 fn main() {
     io::stdout().flush().ok();
     let mut input = String::new();
-    let mut stdin = io::stdin().lock();
+    // let f = std::fs::read("test.txt").unwrap();
+    // input = String::from_utf8(f).unwrap();
+
+    let mut stdin = io::stdin();
     stdin
         .read_to_string(&mut input)
         .expect("Could not read from stdin");
@@ -24,11 +27,14 @@ fn main() {
         let lexer = lexerdef.lexer(&input);
         let (tree, errors) = parser_y::parse(&lexer);
         let tree = tree.unwrap().unwrap();
-        tree.print_label(&lexer);
-        // tree.print();
-        // println!("{:#?}", tree);
+
+        #[cfg(feature = "debug")]
+        println!("{:#?}", tree);
         if !errors.is_empty() {
             return;
         }
+
+        tree.print();
+        tree.print_label(&lexer);
     }
 }

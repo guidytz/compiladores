@@ -20,7 +20,7 @@ lrpar = "0.13.0"
 default = ["lexparser"]
 onlylex = []
 lexparser = []
-lexparser-input-test = []
+debug = []
 
 [[test]]
 name = "test-etapa2"

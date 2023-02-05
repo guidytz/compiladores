@@ -3,7 +3,7 @@ main:
 	cp target/release/etapa3 .
 
 debug:
-	cargo build
+	cargo build --features debug
 	cp target/debug/etapa3 .
 
 clean:
