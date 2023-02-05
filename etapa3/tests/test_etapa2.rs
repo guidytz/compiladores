@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod test {
-    use lrlex::{lrlex_mod, LexerDef};
-    use lrpar::{lrpar_mod, Lexeme, NonStreamingLexer};
+    use lrlex::lrlex_mod;
+    use lrpar::lrpar_mod;
 
     lrlex_mod!("scanner.l");
-    lrpar_mod!("rawparser.y");
+    lrpar_mod!("parser.y");
 
     #[test]
     fn test_etapa2() {
@@ -30,7 +30,7 @@ mod test {
 
                     let lexerdef = scanner_l::lexerdef();
                     let lexer = lexerdef.lexer(&input);
-                    let errors = rawparser_y::parse(&lexer);
+                    let (_, errors) = parser_y::parse(&lexer);
 
                     assert_eq!(expected_output.is_empty(), errors.is_empty());
                 }

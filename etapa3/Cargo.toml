@@ -11,6 +11,7 @@ lrlex = "0.13"
 lrpar = "0.13"
 
 [dependencies]
+anyhow = "1.0.68"
 cfgrammar = "0.13.0"
 lrlex = "0.13.0"
 lrpar = "0.13.0"
@@ -24,7 +25,7 @@ lexparser-input-test = []
 [[test]]
 name = "test-etapa2"
 path = "tests/test_etapa2.rs"
-required-features = ["lexparser-input-test"]
+required-features = ["lexparser"]
 
 [[test]]
 name = "test-etapa1"
