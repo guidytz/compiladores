@@ -13,6 +13,8 @@ lrpar = "0.13"
 [dependencies]
 anyhow = "1.0.68"
 cfgrammar = "0.13.0"
+libc = "0.2.139"
+libc-stdhandle = "0.1.0"
 lrlex = "0.13.0"
 lrpar = "0.13.0"
 
