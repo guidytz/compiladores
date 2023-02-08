@@ -26,3 +26,6 @@ parser.tab.*
 # Ignore rust target
 target
 Cargo.lock
+
+# Ignore tgz files
+**/*.tgz
