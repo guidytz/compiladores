@@ -151,171 +151,89 @@ impl ASTNode {
 
     pub fn print_label(&self, lexer: &LRNonStreamingLexer<DefaultLexerTypes>) {
         if *self == ASTNode::None {
-            // Empty node has no label
+            // Empty node has no label as it is not essentially a real node
             return;
         }
 
-        println!("{} {}", self.addr(), self.label(lexer));
-
-        match self {
-            ASTNode::FnDeclare(node) => {
-                node.comm.print_label(lexer);
-                node.next_fn.print_label(lexer);
-            }
-            ASTNode::VarInit(node) => {
-                node.ident.print_label(lexer);
-                node.lit.print_label(lexer);
-                node.next_init.print_label(lexer);
-
-                node.next.print_label(lexer);
-            }
-            ASTNode::CommAttrib(node) => {
-                node.ident.print_label(lexer);
-                node.expr.print_label(lexer);
-
-                node.next.print_label(lexer);
-            }
-            ASTNode::CommFnCall(node) => {
-                node.expr.print_label(lexer);
-
-                node.next.print_label(lexer);
-            }
-            ASTNode::CommReturn(node) => {
-                node.expr.print_label(lexer);
-            }
-            ASTNode::CommIf(node) => {
-                node.expr.print_label(lexer);
-                node.true_fst_comm.print_label(lexer);
-                node.false_fst_comm.print_label(lexer);
-
-                node.next.print_label(lexer);
-            }
-            ASTNode::CommWhile(node) => {
-                node.expr.print_label(lexer);
-                node.fst_comm.print_label(lexer);
-
-                node.next.print_label(lexer);
-            }
-            ASTNode::ArrIdx(node) => {
-                node.ident.print_label(lexer);
-                node.expr_tree.print_label(lexer);
-
-                node.next.print_label(lexer);
-            }
-            ASTNode::ExprIdxNode(node) => {
-                node.child_left.print_label(lexer);
-                node.child_right.print_label(lexer);
-            }
-            ASTNode::ExprOr(node)
-            | ASTNode::ExprAnd(node)
-            | ASTNode::ExprEq(node)
-            | ASTNode::ExprNeq(node)
-            | ASTNode::ExprLt(node)
-            | ASTNode::ExprGt(node)
-            | ASTNode::ExprLe(node)
-            | ASTNode::ExprGe(node)
-            | ASTNode::ExprAdd(node)
-            | ASTNode::ExprSub(node)
-            | ASTNode::ExprMul(node)
-            | ASTNode::ExprDiv(node)
-            | ASTNode::ExprMod(node) => {
-                node.child_left.print_label(lexer);
-                node.child_right.print_label(lexer);
-
-                node.next.print_label(lexer);
-            }
-            ASTNode::ExprNeg(node) | ASTNode::ExprInv(node) => {
-                node.child.print_label(lexer);
-
-                node.next.print_label(lexer);
-            }
-            ASTNode::LitInt(node) => {
-                node.next.print_label(lexer);
-            }
-            ASTNode::LitFloat(node) => {
-                node.next.print_label(lexer);
-            }
-            ASTNode::LitChar(node) => {
-                node.next.print_label(lexer);
-            }
-            ASTNode::LitBool(node) => {
-                node.next.print_label(lexer);
-            }
-            ASTNode::Identifier(node) => {
-                node.next.print_label(lexer);
-            }
-            ASTNode::None => { /* EMPTY NODE */ }
-        }
+        println!("{}", self.label(lexer));
     }
 
-    pub fn print(&self) {
+    pub fn print(&self, lexer: &LRNonStreamingLexer<DefaultLexerTypes>) {
         match self {
             ASTNode::FnDeclare(node) => {
+                self.print_label(lexer);
                 node.comm.print_parent(&self);
                 node.next_fn.print_parent(&self);
 
-                node.comm.print();
-                node.next_fn.print();
+                node.comm.print(lexer);
+                node.next_fn.print(lexer);
             }
             ASTNode::VarInit(node) => {
+                self.print_label(lexer);
                 node.ident.print_parent(&self);
                 node.lit.print_parent(&self);
                 node.next_init.print_parent(&self);
 
                 node.next.print_parent(&self);
 
-                node.next_init.print();
-                node.next.print();
+                node.next_init.print(lexer);
+                node.next.print(lexer);
             }
             ASTNode::CommAttrib(node) => {
+                self.print_label(lexer);
                 node.ident.print_parent(&self);
                 node.expr.print_parent(&self);
 
-                node.ident.print();
-                node.expr.print();
+                node.ident.print(lexer);
+                node.expr.print(lexer);
             }
             ASTNode::CommFnCall(node) => {
+                self.print_label(lexer);
                 node.expr.print_parent(&self);
                 node.next.print_parent(&self);
 
-                node.expr.print();
-                node.next.print();
+                node.expr.print(lexer);
+                node.next.print(lexer);
             }
             ASTNode::CommReturn(node) => node.expr.print_parent(&self),
             ASTNode::CommIf(node) => {
+                self.print_label(lexer);
                 node.expr.print_parent(&self);
                 node.true_fst_comm.print_parent(&self);
                 node.false_fst_comm.print_parent(&self);
                 node.next.print_parent(&self);
 
-                node.true_fst_comm.print();
-                node.false_fst_comm.print();
-                node.next.print();
+                node.true_fst_comm.print(lexer);
+                node.false_fst_comm.print(lexer);
+                node.next.print(lexer);
             }
             ASTNode::CommWhile(node) => {
+                self.print_label(lexer);
                 node.expr.print_parent(&self);
                 node.fst_comm.print_parent(&self);
                 node.next.print_parent(&self);
 
-                node.expr.print();
-                node.fst_comm.print();
-                node.next.print();
+                node.expr.print(lexer);
+                node.fst_comm.print(lexer);
+                node.next.print(lexer);
             }
             ASTNode::ArrIdx(node) => {
+                self.print_label(lexer);
                 node.ident.print_parent(&self);
                 node.expr_tree.print_parent(&self);
                 node.next.print_parent(&self);
 
-                node.ident.print();
-                node.expr_tree.print();
-                node.next.print();
+                node.ident.print(lexer);
+                node.expr_tree.print(lexer);
+                node.next.print(lexer);
             }
             ASTNode::ExprIdxNode(node) => {
+                self.print_label(lexer);
                 node.child_left.print_parent(&self);
                 node.child_right.print_parent(&self);
 
-                node.child_left.print();
-                node.child_right.print();
+                node.child_left.print(lexer);
+                node.child_right.print(lexer);
             }
             ASTNode::ExprOr(node)
             | ASTNode::ExprAnd(node)
@@ -330,32 +248,38 @@ impl ASTNode {
             | ASTNode::ExprMul(node)
             | ASTNode::ExprDiv(node)
             | ASTNode::ExprMod(node) => {
+                self.print_label(lexer);
                 node.child_left.print_parent(&self);
                 node.child_right.print_parent(&self);
                 node.next.print_parent(&self);
 
-                node.child_left.print();
-                node.child_right.print();
-                node.next.print();
+                node.child_left.print(lexer);
+                node.child_right.print(lexer);
+                node.next.print(lexer);
             }
             ASTNode::ExprNeg(node) | ASTNode::ExprInv(node) => {
+                self.print_label(lexer);
                 node.child.print_parent(&self);
                 node.next.print_parent(&self);
 
-                node.child.print();
-                node.next.print();
+                node.child.print(lexer);
+                node.next.print(lexer);
             }
             ASTNode::LitInt(_)
             | ASTNode::LitFloat(_)
             | ASTNode::LitChar(_)
             | ASTNode::LitBool(_)
             | ASTNode::Identifier(_)
-            | ASTNode::None => { /* LEAFS */ }
+            | ASTNode::None => {
+                /* LEAFS */
+                self.print_label(lexer);
+            }
         }
     }
 
     fn print_parent(&self, parent: &ASTNode) {
         if *self == ASTNode::None {
+            // Empty node has no parent as it is not essentially a real node
             return;
         }
         println!("{}, {}", parent.addr(), self.addr());
@@ -432,7 +356,7 @@ impl ASTNode {
             ASTNode::Identifier(node) => lexer.span_str(node.span).to_owned(),
             ASTNode::None => return "".to_owned(),
         };
-        format!("[label=\"{}\"];", label)
+        format!("{} [label=\"{}\"];", self.addr(), label)
     }
 
     pub fn span(&self) -> Result<Span, anyhow::Error> {

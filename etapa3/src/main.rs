@@ -34,7 +34,6 @@ fn main() {
             return;
         }
 
-        tree.print();
-        tree.print_label(&lexer);
+        tree.print(&lexer);
     }
 }
