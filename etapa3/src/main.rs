@@ -1,3 +1,19 @@
+/*
+    Grupo H
+    Integrante: Guilherme Dytz dos Santos
+
+    A implementação padrao do stdin faz com que um buffer fique alocado
+    ao final da execução do programa e, com isso, o valgrind mostra que
+    existe memória alocada ainda alcançável.
+    Existe uma issue no repositório da linguagem que esclarece melhor o
+    problema: https://github.com/rust-lang/rust/issues/80406.
+    Tentei algumas formas de fazer o free manualmente, mas o buffer
+    alocado aparentemente fica em uma parte privada do código da lib std,
+    o que faz eu não ter acesso a ele para conseguir, de fato, liberar
+    esse trecho de memória.
+
+*/
+
 use std::io::{self, Read, Write};
 
 use lrlex::lrlex_mod;
