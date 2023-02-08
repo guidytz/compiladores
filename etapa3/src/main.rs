@@ -26,16 +26,16 @@ fn main() {
         let lexerdef = scanner_l::lexerdef();
         let lexer = lexerdef.lexer(&input);
         let (tree, errors) = parser_y::parse(&lexer);
-        let tree = tree.unwrap().unwrap();
-
-        #[cfg(feature = "debug")]
-        println!("{:#?}", tree);
         if !errors.is_empty() {
             for err in errors {
                 eprintln!("{}", err.pp(&lexer, &parser_y::token_epp));
             }
             std::process::exit(1);
         }
+
+        let tree = tree.unwrap().unwrap();
+        #[cfg(feature = "debug")]
+        println!("{:#?}", tree);
 
         tree.print(&lexer);
     }
