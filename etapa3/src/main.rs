@@ -31,7 +31,10 @@ fn main() {
         #[cfg(feature = "debug")]
         println!("{:#?}", tree);
         if !errors.is_empty() {
-            return;
+            for err in errors {
+                eprintln!("{}", err.pp(&lexer, &parser_y::token_epp));
+            }
+            std::process::exit(1);
         }
 
         tree.print(&lexer);
