@@ -55,9 +55,14 @@ command_block -> Result<ASTNode, anyhow::Error>:
 commands -> Result<ASTNode, anyhow::Error>:
         command commands {
                 let comm = $1?;
-                let next = Box::new($2?);
-                let node = comm.add_next(next)?;
-                Ok(node)
+                match comm {
+                        ASTNode::None => $2,
+                        _ => {
+                                let next = Box::new($2?);
+                                let node = comm.add_next(next)?;
+                                Ok(node)
+                        },
+                }
         } |
         command { $1 } ;
 
