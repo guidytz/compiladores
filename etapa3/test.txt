@@ -1,4 +1,13 @@
 int function() {
     int a <= 1, b, c <= 2;
-    return 3;
+    b = 3;
+    if (2 + 3) then {
+        while (ident) {
+            a = - 1;
+        };
+    } else {
+        b = !7;
+    };
+    fun(a, 2, c);
+    return 2;
 }

@@ -171,19 +171,24 @@ impl ASTNode {
             ASTNode::VarInit(node) => {
                 node.ident.print_parent(&self);
                 node.lit.print_parent(&self);
-
                 if let Some(next) = &node.next {
                     next.print_parent(&self);
+                }
 
+                node.ident.print(lexer);
+                node.lit.print(lexer);
+                if let Some(next) = &node.next {
                     next.print(lexer);
                 }
             }
             ASTNode::CommAttrib(node) => {
                 node.ident.print_parent(&self);
                 node.expr.print_parent(&self);
+                node.next.print_parent(&self);
 
                 node.ident.print(lexer);
                 node.expr.print(lexer);
+                node.next.print(lexer);
             }
             ASTNode::CommFnCall(node) => {
                 node.expr.print_parent(&self);
@@ -192,13 +197,18 @@ impl ASTNode {
                 node.expr.print(lexer);
                 node.next.print(lexer);
             }
-            ASTNode::CommReturn(node) => node.expr.print_parent(&self),
+            ASTNode::CommReturn(node) => {
+                node.expr.print_parent(&self);
+
+                node.expr.print(lexer);
+            }
             ASTNode::CommIf(node) => {
                 node.expr.print_parent(&self);
                 node.true_fst_comm.print_parent(&self);
                 node.false_fst_comm.print_parent(&self);
                 node.next.print_parent(&self);
 
+                node.expr.print(lexer);
                 node.true_fst_comm.print(lexer);
                 node.false_fst_comm.print(lexer);
                 node.next.print(lexer);
@@ -256,12 +266,27 @@ impl ASTNode {
                 node.child.print(lexer);
                 node.next.print(lexer);
             }
-            ASTNode::LitInt(_)
-            | ASTNode::LitFloat(_)
-            | ASTNode::LitChar(_)
-            | ASTNode::LitBool(_)
-            | ASTNode::Identifier(_)
-            | ASTNode::None => { /* LEAFS */ }
+            ASTNode::LitInt(node) => {
+                node.next.print_parent(&self);
+                node.next.print(lexer);
+            }
+            ASTNode::LitFloat(node) => {
+                node.next.print_parent(&self);
+                node.next.print(lexer);
+            }
+            ASTNode::LitChar(node) => {
+                node.next.print_parent(&self);
+                node.next.print(lexer);
+            }
+            ASTNode::LitBool(node) => {
+                node.next.print_parent(&self);
+                node.next.print(lexer);
+            }
+            ASTNode::Identifier(node) => {
+                node.next.print_parent(&self);
+                node.next.print(lexer);
+            }
+            ASTNode::None => { /* NOT A REAL NODE */ }
         }
     }
 
@@ -465,8 +490,8 @@ impl CommAttrib {
 pub struct CommFnCall {
     pub span: Span,
     pub expr: Box<ASTNode>,
-    pub name: Span,
     pub next: Box<ASTNode>,
+    pub name: Span,
 }
 
 impl CommFnCall {
