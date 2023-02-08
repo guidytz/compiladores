@@ -3,7 +3,7 @@ use cfgrammar::Span;
 use lrlex::{DefaultLexerTypes, LRNonStreamingLexer};
 use lrpar::NonStreamingLexer;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ASTNode {
     FnDeclare(FnDeclare),
     VarInit(VarInit),
@@ -141,7 +141,7 @@ impl ASTNode {
                 ASTNode::Identifier(node)
             }
             ASTNode::VarInit(mut node) => {
-                node.add_next(next);
+                node.add_next(next)?;
                 ASTNode::VarInit(node)
             }
             ast_node => bail!("Error: {:#?} should not have a next child node.", ast_node),
@@ -171,12 +171,12 @@ impl ASTNode {
             ASTNode::VarInit(node) => {
                 node.ident.print_parent(&self);
                 node.lit.print_parent(&self);
-                node.next_init.print_parent(&self);
 
-                node.next.print_parent(&self);
+                if let Some(next) = &node.next {
+                    next.print_parent(&self);
 
-                node.next_init.print(lexer);
-                node.next.print(lexer);
+                    next.print(lexer);
+                }
             }
             ASTNode::CommAttrib(node) => {
                 node.ident.print_parent(&self);
@@ -383,7 +383,7 @@ impl ASTNode {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FnDeclare {
     pub span: Span,
     pub comm: Box<ASTNode>,
@@ -406,13 +406,12 @@ impl FnDeclare {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VarInit {
     pub span: Span,
     pub ident: Box<ASTNode>,
     pub lit: Box<ASTNode>,
-    pub next_init: Box<ASTNode>,
-    pub next: Box<ASTNode>,
+    pub next: Option<Box<ASTNode>>,
 }
 
 impl VarInit {
@@ -420,23 +419,26 @@ impl VarInit {
         span: Span,
         ident: Box<ASTNode>,
         lit: Box<ASTNode>,
-        next_init: Box<ASTNode>,
+        next: Option<Box<ASTNode>>,
     ) -> Self {
         Self {
             span,
             ident,
             lit,
-            next_init,
-            next: Box::new(ASTNode::None),
+            next,
         }
     }
 
-    pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+    pub fn add_next(&mut self, next: Box<ASTNode>) -> Result<(), anyhow::Error> {
+        match &self.next {
+            Some(node) => self.next = Some(Box::new(node.clone().add_next(next)?)),
+            None => self.next = Some(next),
+        }
+        Ok(())
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CommAttrib {
     pub span: Span,
     pub ident: Box<ASTNode>,
@@ -459,7 +461,7 @@ impl CommAttrib {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CommFnCall {
     pub span: Span,
     pub expr: Box<ASTNode>,
@@ -482,7 +484,7 @@ impl CommFnCall {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CommReturn {
     pub span: Span,
     pub expr: Box<ASTNode>,
@@ -494,7 +496,7 @@ impl CommReturn {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CommIf {
     pub span: Span,
     pub expr: Box<ASTNode>,
@@ -524,7 +526,7 @@ impl CommIf {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CommWhile {
     pub span: Span,
     pub expr: Box<ASTNode>,
@@ -547,7 +549,7 @@ impl CommWhile {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ArrIdx {
     pub span: Span,
     pub ident: Box<ASTNode>,
@@ -570,7 +572,7 @@ impl ArrIdx {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ExprIdxNode {
     pub span: Span,
     pub child_left: Box<ASTNode>,
@@ -587,7 +589,7 @@ impl ExprIdxNode {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BinOp {
     pub span: Span,
     pub child_left: Box<ASTNode>,
@@ -610,7 +612,7 @@ impl BinOp {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct UnOp {
     pub span: Span,
     pub child: Box<ASTNode>,
@@ -631,7 +633,7 @@ impl UnOp {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LitInt {
     pub span: Span,
     pub next: Box<ASTNode>,
@@ -650,7 +652,7 @@ impl LitInt {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LitFloat {
     pub span: Span,
     pub next: Box<ASTNode>,
@@ -669,7 +671,7 @@ impl LitFloat {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LitChar {
     pub span: Span,
     pub next: Box<ASTNode>,
@@ -688,7 +690,7 @@ impl LitChar {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LitBool {
     pub span: Span,
     pub next: Box<ASTNode>,
@@ -707,7 +709,7 @@ impl LitBool {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Identifier {
     pub span: Span,
     pub next: Box<ASTNode>,

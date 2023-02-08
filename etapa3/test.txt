@@ -1,5 +1,4 @@
 int function() {
-    varOne = vartwo[10^20+20^a+b];
+    int a <= 1, b, c <= 2;
+    return 3;
 }
-
-bool anotherFunction() {}

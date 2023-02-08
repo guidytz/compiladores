@@ -74,16 +74,15 @@ var_declare -> Result<ASTNode, anyhow::Error>:
         type ident "TK_OC_LE" literals ',' var_list {
                 let ident = Box::new($2?);
                 let lit = Box::new($4?);
-                let next_init = Box::new($6?);
-                let node = VarInit::new($span, ident, lit, next_init);
+                let next = Some(Box::new($6?));
+                let node = VarInit::new($span, ident, lit, next);
                 Ok(ASTNode::VarInit(node))
         } |
         type ident { Ok(ASTNode::None) } |
         type ident "TK_OC_LE" literals {
                 let ident = Box::new($2?);
                 let lit = Box::new($4?);
-                let next_init = Box::new(ASTNode::None);
-                let node = VarInit::new($span, ident, lit, next_init);
+                let node = VarInit::new($span, ident, lit, None);
                 Ok(ASTNode::VarInit(node))
         } ;
 
@@ -91,15 +90,14 @@ var_list -> Result<ASTNode, anyhow::Error>:
         ident "TK_OC_LE" literals ',' var_list {
                 let ident = Box::new($1?);
                 let lit = Box::new($3?);
-                let next_init = Box::new($5?);
-                let node = VarInit::new($span, ident, lit, next_init);
+                let next = Some(Box::new($5?));
+                let node = VarInit::new($span, ident, lit, next);
                 Ok(ASTNode::VarInit(node))
         } |
         ident "TK_OC_LE" literals {
                 let ident = Box::new($1?);
                 let lit = Box::new($3?);
-                let next_init = Box::new(ASTNode::None);
-                let node = VarInit::new($span, ident, lit, next_init);
+                let node = VarInit::new($span, ident, lit, None);
                 Ok(ASTNode::VarInit(node))
         } |
         ident ',' var_list { $3 } |
