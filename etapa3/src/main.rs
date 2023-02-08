@@ -21,10 +21,10 @@ fn main() {
     unsafe {
         let mut buffer = [0 as libc::c_char; 500];
         let buffer_ptr = buffer.as_mut_ptr();
-        let mut size = libc::fgets(buffer_ptr, 500, libc_stdhandle::stdin());
-        while size != 0 as *mut libc::c_char {
+        while libc::fgets(buffer_ptr, 500, libc_stdhandle::stdin())
+            != libc::PT_NULL as *mut libc::c_char
+        {
             input.extend_from_slice(&buffer[..libc::strlen(buffer_ptr) as usize]);
-            size = libc::fgets(buffer_ptr, 500, libc_stdhandle::stdin());
         }
     };
     let input = input.into_iter().map(|val| val as u8).collect::<Vec<_>>();
