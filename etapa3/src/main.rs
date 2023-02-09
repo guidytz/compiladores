@@ -28,7 +28,7 @@ fn main() {
         }
     };
     let input = input.into_iter().map(|val| val as u8).collect::<Vec<_>>();
-    let input = std::str::from_utf8(input.as_slice()).unwrap();
+    let input = std::str::from_utf8(input.as_slice()).expect("Could not parse input as string");
 
     #[cfg(feature = "lexparser")]
     {
