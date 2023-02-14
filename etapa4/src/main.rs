@@ -5,6 +5,7 @@
 
 use std::io::{self, Write};
 
+use etapa4::SCOPE_STACK;
 // use etapa4::SCOPE_STACK;
 use lrlex::lrlex_mod;
 #[cfg(feature = "lexparser")]
@@ -35,6 +36,7 @@ fn main() {
     {
         let lexerdef = scanner_l::lexerdef();
         let lexer = lexerdef.lexer(&input);
+        SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope());
         let (tree, errors) = parser_y::parse(&lexer);
         if !errors.is_empty() {
             for err in errors {
@@ -43,10 +45,22 @@ fn main() {
             std::process::exit(1);
         }
 
-        let tree = tree.unwrap().unwrap();
+        let tree = tree.unwrap();
+        match tree {
+            Ok(tree) => {
+                #[cfg(feature = "debug")]
+                println!("{:#?}", tree);
+
+                tree.print(&lexer);
+            }
+            Err(err) => {
+                eprint!("{err}");
+                std::process::exit(err.to_err_code());
+            }
+        }
         #[cfg(feature = "debug")]
         println!("{:#?}", tree);
 
-        tree.print(&lexer);
+        // tree.print(&lexer);
     }
 }

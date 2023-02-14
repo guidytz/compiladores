@@ -4,7 +4,7 @@ main:
 
 debug:
 	cargo build --features debug
-	cp target/debug/etapa3 .
+	cp target/debug/etapa4 .
 
 clean:
 	cargo clean

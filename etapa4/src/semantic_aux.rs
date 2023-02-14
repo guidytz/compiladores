@@ -12,6 +12,9 @@ pub enum SymbolEntry {
     LitFloat(SymbolLitFloat),
     LitChar(SymbolLitChar),
     LitBool(SymbolLitBool),
+    Var(SymbolVar),
+    Arr(SymbolArr),
+    Fn(SymbolFn),
 }
 
 impl SymbolEntry {
@@ -21,6 +24,29 @@ impl SymbolEntry {
             SymbolEntry::LitFloat(content) => (content.line, content.col),
             SymbolEntry::LitChar(content) => (content.line, content.col),
             SymbolEntry::LitBool(content) => (content.line, content.col),
+            SymbolEntry::Var(content) => (content.line, content.col),
+            SymbolEntry::Arr(content) => (content.line, content.col),
+            SymbolEntry::Fn(content) => (content.line, content.col),
+        }
+    }
+
+    pub fn from_untyped_var(var: UntypedVar, ty: SymbolType) -> Self {
+        match var {
+            UntypedVar::UniVar(var) => SymbolEntry::Var(SymbolVar {
+                line: var.line,
+                col: var.col,
+                size: ty.get_size(),
+                val: var.name,
+                ty,
+            }),
+            UntypedVar::ArrVar(var) => SymbolEntry::Arr(SymbolArr {
+                line: var.line,
+                col: var.col,
+                size: var.dims.iter().fold(ty.get_size(), |acc, val| acc * val),
+                val: var.name,
+                ty,
+                dims: var.dims,
+            }),
         }
     }
 }
@@ -29,7 +55,7 @@ impl SymbolEntry {
 pub struct SymbolLitInt {
     pub line: usize,
     pub col: usize,
-    pub size: u8,
+    pub size: usize,
     pub val: u32,
 }
 
@@ -37,7 +63,7 @@ pub struct SymbolLitInt {
 pub struct SymbolLitFloat {
     pub line: usize,
     pub col: usize,
-    pub size: u8,
+    pub size: usize,
     pub val: f64,
 }
 
@@ -45,7 +71,7 @@ pub struct SymbolLitFloat {
 pub struct SymbolLitChar {
     pub line: usize,
     pub col: usize,
-    pub size: u8,
+    pub size: usize,
     pub val: char,
 }
 
@@ -53,8 +79,37 @@ pub struct SymbolLitChar {
 pub struct SymbolLitBool {
     pub line: usize,
     pub col: usize,
-    pub size: u8,
+    pub size: usize,
     pub val: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct SymbolVar {
+    pub line: usize,
+    pub col: usize,
+    pub size: usize,
+    pub val: String,
+    pub ty: SymbolType,
+}
+
+#[derive(Debug, Clone)]
+pub struct SymbolArr {
+    pub line: usize,
+    pub col: usize,
+    pub size: usize,
+    pub val: String,
+    pub ty: SymbolType,
+    pub dims: Vec<usize>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SymbolFn {
+    pub line: usize,
+    pub col: usize,
+    pub size: usize,
+    pub val: String,
+    pub ty: SymbolType,
+    pub args: Option<Vec<Box<SymbolEntry>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +120,18 @@ pub enum SymbolType {
     BOOL,
 }
 
+impl SymbolType {
+    pub fn get_size(&self) -> usize {
+        match self {
+            SymbolType::CHAR => 1usize,
+            SymbolType::INT => 4usize,
+            SymbolType::FLOAT => 8usize,
+            SymbolType::BOOL => 1usize,
+        }
+    }
+}
+
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct SymbolTable(pub HashMap<String, SymbolEntry>);
 
@@ -77,7 +144,7 @@ impl SymbolTable {
         if let Some(symbol) = self.0.get(&key) {
             let (line, col) = symbol.get_line_col();
             return Err(ParsingError::ErrDeclared(format!(
-                "variable with name {key} was first declared at line {}, col {}.",
+                "variable with name \"{key}\" was first declared at line {}, col {}.",
                 line, col
             )));
         }
@@ -92,6 +159,7 @@ impl SymbolTable {
     }
 }
 
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct ScopeStack(pub Vec<SymbolTable>);
 
@@ -109,7 +177,7 @@ impl ScopeStack {
         }
 
         Err(ParsingError::ErrDeclared(format!(
-            "variable with name {key} was never declared"
+            "variable with name \"{key}\" was never declared"
         )))
     }
 
@@ -119,6 +187,33 @@ impl ScopeStack {
 
     pub fn pop_scope(&mut self) {
         self.0.pop();
+    }
+
+    pub fn add_symbol(&mut self, symbol: SymbolEntry) -> Result<(), ParsingError> {
+        let scope_table = self.0.last_mut().ok_or(ParsingError::NoScope)?;
+        match &symbol {
+            SymbolEntry::LitInt(content) => {
+                let key = content.val.to_string();
+                scope_table.add_symbol(key, symbol)?;
+            }
+            SymbolEntry::LitFloat(content) => {
+                let key = content.val.to_string();
+                scope_table.add_symbol(key, symbol)?;
+            }
+            SymbolEntry::LitChar(content) => {
+                let key = content.val.to_string();
+                scope_table.add_symbol(key, symbol)?;
+            }
+            SymbolEntry::LitBool(content) => {
+                let key = content.val.to_string();
+                scope_table.add_symbol(key, symbol)?;
+            }
+            SymbolEntry::Var(content) => scope_table.add_symbol(content.val.clone(), symbol)?,
+            SymbolEntry::Arr(content) => scope_table.add_symbol(content.val.clone(), symbol)?,
+            SymbolEntry::Fn(content) => scope_table.add_symbol(content.val.clone(), symbol)?,
+        }
+
+        Ok(())
     }
 }
 
@@ -142,13 +237,13 @@ pub struct ArrVar {
     pub line: usize,
     pub col: usize,
     pub name: String,
-    pub dims: Vec<u32>,
+    pub dims: Vec<usize>,
 }
 
 impl ArrVar {
     pub fn new(
         span: Span,
-        dims: Vec<u32>,
+        dims: Vec<usize>,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Self {
         let ((line, col), _) = lexer.line_col(span);
@@ -171,7 +266,7 @@ pub enum UntypedVar {
 pub fn int_from_span(
     span: Span,
     lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
-) -> Result<u32, ParsingError> {
+) -> Result<usize, ParsingError> {
     let value = lexer.span_str(span).parse()?;
     Ok(value)
 }

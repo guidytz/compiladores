@@ -20,11 +20,23 @@ element_list -> Result<ASTNode, ParsingError>:
         } |
         global_declare element_list { $2 } |
         function        { $1 } |
-        global_declare  { empty_node!() } ;
+        global_declare  {
+                $1?; // propagate parsing errors
+                empty_node!()
+        } ;
 
 
 global_declare -> Result<(), ParsingError>:
         type name_list {
+                let ty = $1?;
+                for var in $2? {
+                        let symbol = SymbolEntry::from_untyped_var(var, ty.clone());
+                        SCOPE_STACK.with::<_, Result<(), ParsingError>>(|stack| stack.borrow_mut().add_symbol(symbol))?;
+                }
+
+                SCOPE_STACK.with(|stack| {
+                        println!("{:#?}", *stack.borrow());
+                });
                 Ok(())
         } ;
 
@@ -351,7 +363,7 @@ type -> Result<SymbolType, ParsingError>:
         "TK_PR_BOOL" { Ok(SymbolType::BOOL) } |
         "TK_PR_CHAR"  { Ok(SymbolType::CHAR) } ;
 
-multidim -> Result<Vec<u32>, ParsingError>:
+multidim -> Result<Vec<usize>, ParsingError>:
         lit_int_val '^' multidim {
                 let mut dim = vec![$1?];
                 dim.extend($3?);
@@ -359,7 +371,7 @@ multidim -> Result<Vec<u32>, ParsingError>:
         } |
         lit_int_val { Ok(vec![$1?]) } ;
 
-lit_int_val -> Result<u32, ParsingError>:
+lit_int_val -> Result<usize, ParsingError>:
         "TK_LIT_INT" { int_from_span($span, $lexer) } ;
 
 %%
@@ -383,8 +395,13 @@ use etapa4::{ast::{
         LitBool,
         Identifier},
         errors::ParsingError,
-        // SCOPE_STACK,
-        semantic_aux::{int_from_span, UniVar, ArrVar, UntypedVar, SymbolType}};
+        SCOPE_STACK,
+        semantic_aux::{int_from_span,
+                       UniVar,
+                       ArrVar,
+                       UntypedVar,
+                       SymbolType,
+                       SymbolEntry}};
 
 macro_rules! empty_node {
         () => {

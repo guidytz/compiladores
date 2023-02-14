@@ -29,14 +29,24 @@ pub enum ParsingError {
     SpanError(String),
     #[error("Add next to None node error: `{0}`")]
     AddNextToNone(String),
+    #[error("No scope defined")]
+    NoScope,
 }
-// ERR_UNDECLARED 10 //2.2
-// ERR_DECLARED 11 //2.2
-// ERR_VARIABLE 20 //2.3
-// ERR_ARRAY 21 //2.3
-// ERR_FUNCTION 22 //2.3
-// ERR_CHAR_TO_INT 31 //2.4
-// ERR_CHAR_TO_FLOAT 32 //2.4
-// ERR_CHAR_TO_BOOL 33 //2.4
-// ERR_CHAR_VECTOR 34 //2.4
-// ERR_X_TO_CHAR 35 //2.4
+
+impl ParsingError {
+    pub fn to_err_code(&self) -> i32 {
+        match self {
+            ParsingError::ErrUndeclared(_) => 10,
+            ParsingError::ErrDeclared(_) => 11,
+            ParsingError::ErrVariable(_) => 20,
+            ParsingError::ErrArray(_) => 21,
+            ParsingError::ErrFunction(_) => 22,
+            ParsingError::ErrCharToInt(_) => 31,
+            ParsingError::ErrCharToFloat(_) => 32,
+            ParsingError::ErrCharToBool(_) => 33,
+            ParsingError::ErrCharVector(_) => 34,
+            ParsingError::ErrXToChar(_) => 35,
+            _ => 1,
+        }
+    }
+}
