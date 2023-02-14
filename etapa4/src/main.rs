@@ -3,7 +3,10 @@
     Integrante: Guilherme Dytz dos Santos
 */
 
-use std::io::{self, Write};
+use std::{
+    io::{self, Write},
+    process::ExitCode,
+};
 
 use etapa4::SCOPE_STACK;
 // use etapa4::SCOPE_STACK;
@@ -17,7 +20,7 @@ lrlex_mod!("scanner.l");
 #[cfg(feature = "lexparser")]
 lrpar_mod!("parser.y");
 
-fn main() {
+fn main() -> ExitCode {
     io::stdout().flush().ok();
     let mut input = Vec::new();
     unsafe {
@@ -42,7 +45,7 @@ fn main() {
             for err in errors {
                 eprintln!("{}", err.pp(&lexer, &parser_y::token_epp));
             }
-            std::process::exit(1);
+            return ExitCode::from(1);
         }
 
         let tree = tree.unwrap();
@@ -52,15 +55,12 @@ fn main() {
                 println!("{:#?}", tree);
 
                 tree.print(&lexer);
+                ExitCode::SUCCESS
             }
             Err(err) => {
-                eprint!("{err}");
-                std::process::exit(err.to_err_code());
+                eprintln!("{err}");
+                ExitCode::from(err.to_err_code())
             }
         }
-        #[cfg(feature = "debug")]
-        println!("{:#?}", tree);
-
-        // tree.print(&lexer);
     }
 }

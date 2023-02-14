@@ -33,10 +33,6 @@ global_declare -> Result<(), ParsingError>:
                         let symbol = SymbolEntry::from_untyped_var(var, ty.clone());
                         SCOPE_STACK.with::<_, Result<(), ParsingError>>(|stack| stack.borrow_mut().add_symbol(symbol))?;
                 }
-
-                SCOPE_STACK.with(|stack| {
-                        println!("{:#?}", *stack.borrow());
-                });
                 Ok(())
         } ;
 
