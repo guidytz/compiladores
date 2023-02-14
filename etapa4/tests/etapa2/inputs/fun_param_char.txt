@@ -1,0 +1,1 @@
+float funname(char a) {}
