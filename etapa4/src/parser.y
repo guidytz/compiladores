@@ -5,7 +5,7 @@
 %%
 program -> Result<ASTNode, ParsingError>:
         element_list { $1 } |
-        { empty_node!() } ;
+        %empty { empty_node!() } ;
 
 element_list -> Result<ASTNode, ParsingError>:
         function element_list {
@@ -30,16 +30,16 @@ global_declare -> Result<(), ParsingError>:
         type name_list {
                 let ty = $1?;
                 for var in $2? {
-                        let symbol = SymbolEntry::from_untyped_var(var, ty.clone());
-                        SCOPE_STACK.with::<_, Result<(), ParsingError>>(|stack| stack.borrow_mut().add_symbol(symbol))?;
+                        let symbol = SymbolEntry::from_untyped_global_declr(var, ty.clone());
+                        SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(symbol))?;
                 }
                 Ok(())
         } ;
 
-name_list -> Result<Vec<UntypedVar>, ParsingError>:
+name_list -> Result<Vec<UntypedGlobalDeclr>, ParsingError>:
         ident ',' name_list {
                 let ident = $1?;
-                let var = UntypedVar::UniVar(UniVar::new(ident.span()?, $lexer));
+                let var = UntypedGlobalDeclr::Var(UntypedVar::new(ident.span()?, $lexer));
                 let mut var_vec = vec![var];
                 var_vec.extend($3?);
                 Ok(var_vec)
@@ -47,7 +47,7 @@ name_list -> Result<Vec<UntypedVar>, ParsingError>:
         ident '[' multidim ']' ',' name_list {
                 let ident = $1?;
                 let dims = $3?;
-                let var_arr = UntypedVar::ArrVar(ArrVar::new(ident.span()?, dims, $lexer));
+                let var_arr = UntypedGlobalDeclr::Arr(UntypedArr::new(ident.span()?, dims, $lexer));
                 let mut var_vec = vec![var_arr];
                 var_vec.extend($6?);
                 Ok(var_vec)
@@ -55,33 +55,53 @@ name_list -> Result<Vec<UntypedVar>, ParsingError>:
         ident '[' multidim ']' ';' {
                 let ident = $1?;
                 let dims = $3?;
-                let var_arr = UntypedVar::ArrVar(ArrVar::new(ident.span()?, dims, $lexer));
+                let var_arr = UntypedGlobalDeclr::Arr(UntypedArr::new(ident.span()?, dims, $lexer));
                 Ok(vec![var_arr])
         } |
         ident ';' {
                 let ident = $1?;
-                let var = UntypedVar::UniVar(UniVar::new(ident.span()?, $lexer));
+                let var = UntypedGlobalDeclr::Var(UntypedVar::new(ident.span()?, $lexer));
                 Ok(vec![var])
         } ;
 
 function -> Result<ASTNode, ParsingError>:
-        type ident fun_params command_block  {
+        type ident fun_params fn_command_block {
                 let ident = $2?;
                 let comm = Box::new($4?);
                 let node = FnDeclare::new($span, comm, ident.span()?);
                 Ok(ASTNode::FnDeclare(node))
         } ;
 
-fun_params -> Result<ASTNode, ParsingError>:
-        '(' param_list ')' { empty_node!() } |
-        '(' ')' { empty_node!() } ;
+fun_params -> Result<Option<Vec<SymbolEntry>>, ParsingError>:
+        '(' begin_scope param_list ')' {
+                Ok(Some($3?))
+        } |
+        '(' begin_scope ')' { Ok(None) } ;
 
-param_list -> Result<ASTNode, ParsingError>:
-        type ident ',' param_list { empty_node!() } |
-        type ident  { empty_node!() } ;
+param_list -> Result<Vec<SymbolEntry>, ParsingError>:
+        type ident ',' param_list {
+                let name = $lexer.span_str($2?.span()?).to_string();
+                let var = SymbolEntry::Var(CommonAttrs::new(name, $1?, $span, $lexer));
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(var.clone()))?;
+
+                let mut list = vec![var];
+                list.extend($4?);
+                Ok(list)
+        } |
+        type ident  {
+                let name = $lexer.span_str($2?.span()?).to_string();
+                let var = SymbolEntry::Var(CommonAttrs::new(name, $1?, $span, $lexer));
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(var.clone()))?;
+
+                Ok(vec![var])
+        } ;
+
+fn_command_block -> Result<ASTNode, ParsingError>:
+        '{' commands end_scope '}' { $2 } |
+        '{' end_scope '}' { empty_node!() } ;
 
 command_block -> Result<ASTNode, ParsingError>:
-        '{' commands '}' { $2 } |
+        '{' begin_scope commands end_scope '}' { $3 } |
         '{' '}' { empty_node!() } ;
 
 commands -> Result<ASTNode, ParsingError>:
@@ -107,38 +127,48 @@ command -> Result<ASTNode, ParsingError>:
         flux_ctrl ';'           { $1 } ;
 
 var_declare -> Result<ASTNode, ParsingError>:
-        type ident ',' var_list { empty_node!() } |
-        type ident "TK_OC_LE" literals ',' var_list {
-                let ident = Box::new($2?);
-                let lit = Box::new($4?);
-                let next = Some(Box::new($6?));
-                let node = VarInit::new($span, ident, lit, next);
-                Ok(ASTNode::VarInit(node))
-        } |
-        type ident { empty_node!() } |
-        type ident "TK_OC_LE" literals {
-                let ident = Box::new($2?);
-                let lit = Box::new($4?);
-                let node = VarInit::new($span, ident, lit, None);
-                Ok(ASTNode::VarInit(node))
+        type var_list {
+                let aux = $2?;
+                let ty = $1?;
+                for var in aux.vars {
+                        let symbol = SymbolEntry::from_untyped_var(var, ty.clone());
+                        SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(symbol))?;
+                }
+                Ok(aux.node)
         } ;
 
-var_list -> Result<ASTNode, ParsingError>:
+var_list -> Result<LocalDeclrAux, ParsingError>:
         ident "TK_OC_LE" literals ',' var_list {
-                let ident = Box::new($1?);
+                let ident = $1?;
+                let mut aux = $5?;
+
+                let var = UntypedVar::new(ident.span()?, $lexer);
                 let lit = Box::new($3?);
-                let next = Some(Box::new($5?));
-                let node = VarInit::new($span, ident, lit, next);
-                Ok(ASTNode::VarInit(node))
+
+                aux.vars.push(var);
+                let node = VarInit::new($span, Box::new(ident), lit, Some(Box::new(aux.node)));
+                aux.node = ASTNode::VarInit(node);
+                Ok(aux)
         } |
         ident "TK_OC_LE" literals {
-                let ident = Box::new($1?);
+                let ident = $1?;
                 let lit = Box::new($3?);
-                let node = VarInit::new($span, ident, lit, None);
-                Ok(ASTNode::VarInit(node))
+                let var = UntypedVar::new(ident.span()?, $lexer);
+                let node = ASTNode::VarInit(VarInit::new($span, Box::new(ident), lit, None));
+                Ok(LocalDeclrAux::new(vec![var], node))
         } |
-        ident ',' var_list { $3 } |
-        ident { empty_node!() } ;
+        ident ',' var_list {
+                let ident = $1?;
+                let mut aux = $3?;
+                let var = UntypedVar::new(ident.span()?, $lexer);
+                aux.vars.push(var);
+                Ok(aux)
+        } |
+        ident {
+                let ident = $1?;
+                let vars = vec![UntypedVar::new(ident.span()?, $lexer)];
+                Ok(LocalDeclrAux::with_vars(vars))
+        } ;
 
 attrib -> Result<ASTNode, ParsingError>:
         ident '=' expr {
@@ -370,6 +400,30 @@ multidim -> Result<Vec<usize>, ParsingError>:
 lit_int_val -> Result<usize, ParsingError>:
         "TK_LIT_INT" { int_from_span($span, $lexer) } ;
 
+begin_scope -> Result<(), ParsingError>:
+        %empty {
+                SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope());
+                Ok(())
+        };
+
+end_scope -> Result<(), ParsingError>:
+        %empty {
+                #[cfg(feature = "debug")]
+                {
+                        print!("Finishing scope. Stack: ");
+                        print_stack!()
+                }
+
+                SCOPE_STACK.with(|stack| stack.borrow_mut().pop_scope());
+
+                #[cfg(feature = "debug")]
+                {
+                        print!("Stack  after: ");
+                        print_stack!()
+                }
+                Ok(())
+        };
+
 %%
 
 use etapa4::{ast::{
@@ -393,14 +447,23 @@ use etapa4::{ast::{
         errors::ParsingError,
         SCOPE_STACK,
         semantic_aux::{int_from_span,
-                       UniVar,
-                       ArrVar,
                        UntypedVar,
+                       UntypedArr,
+                       UntypedGlobalDeclr,
                        SymbolType,
-                       SymbolEntry}};
+                       SymbolEntry,
+                       CommonAttrs,
+                       LocalDeclrAux}};
 
 macro_rules! empty_node {
         () => {
                 Ok(ASTNode::None)
+        }
+}
+
+#[cfg(feature = "debug")]
+macro_rules! print_stack {
+        () => {
+                SCOPE_STACK.with(|stack| println!("{:#?}", *stack.borrow()));
         }
 }

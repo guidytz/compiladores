@@ -462,7 +462,12 @@ impl VarInit {
 
     pub fn add_next(&mut self, next: Box<ASTNode>) -> Result<(), ParsingError> {
         match &self.next {
-            Some(node) => self.next = Some(Box::new(node.clone().add_next(next)?)),
+            Some(node) => {
+                self.next = match **node {
+                    ASTNode::None => Some(next),
+                    _ => Some(Box::new(node.clone().add_next(next)?)),
+                }
+            }
             None => self.next = Some(next),
         }
         Ok(())

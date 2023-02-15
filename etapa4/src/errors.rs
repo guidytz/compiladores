@@ -4,7 +4,7 @@ use std::num::ParseIntError;
 pub enum ParsingError {
     #[error("Attempted use of undeclared variable: {0}")]
     ErrUndeclared(String),
-    #[error("Attempting to declare an already declared variable: {0}")]
+    #[error("Attempting to declare an already declared variable {0}")]
     ErrDeclared(String),
     #[error("{0}")]
     ErrVariable(String),

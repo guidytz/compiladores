@@ -6,6 +6,10 @@ debug:
 	cargo build --features debug
 	cp target/debug/etapa4 .
 
+debug-tree:
+	cargo build --features debug-tree
+	cp target/debug/etapa4 .
+
 clean:
 	cargo clean
 	rm -f etapa4 Cargo.lock

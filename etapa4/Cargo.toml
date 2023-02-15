@@ -25,6 +25,7 @@ default = ["lexparser"]
 onlylex = []
 lexparser = []
 debug = []
+debug-tree = []
 
 [[test]]
 name = "test-etapa2"

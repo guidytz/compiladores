@@ -3,13 +3,14 @@
     Integrante: Guilherme Dytz dos Santos
 */
 
-use std::{
-    io::{self, Write},
-    process::ExitCode,
-};
+use std::process::ExitCode;
 
+#[cfg(feature = "lexparser")]
+use std::io::{self, Write};
+
+#[cfg(feature = "lexparser")]
 use etapa4::SCOPE_STACK;
-// use etapa4::SCOPE_STACK;
+
 use lrlex::lrlex_mod;
 #[cfg(feature = "lexparser")]
 use lrpar::lrpar_mod;
@@ -21,29 +22,29 @@ lrlex_mod!("scanner.l");
 lrpar_mod!("parser.y");
 
 fn main() -> ExitCode {
-    io::stdout().flush().ok();
-    let mut input = Vec::new();
-    unsafe {
-        let mut buffer = [0 as libc::c_char; 500];
-        let buffer_ptr = buffer.as_mut_ptr();
-        while libc::fgets(buffer_ptr, 500, libc_stdhandle::stdin())
-            != libc::PT_NULL as *mut libc::c_char
-        {
-            input.extend_from_slice(&buffer[..libc::strlen(buffer_ptr) as usize]);
-        }
-    };
-    let input = input.into_iter().map(|val| val as u8).collect::<Vec<_>>();
-    let input = std::str::from_utf8(input.as_slice()).expect("Could not parse input as string");
-
     #[cfg(feature = "lexparser")]
     {
+        io::stdout().flush().ok();
+        let mut input = Vec::new();
+        unsafe {
+            let mut buffer = [0 as libc::c_char; 500];
+            let buffer_ptr = buffer.as_mut_ptr();
+            while libc::fgets(buffer_ptr, 500, libc_stdhandle::stdin())
+                != libc::PT_NULL as *mut libc::c_char
+            {
+                input.extend_from_slice(&buffer[..libc::strlen(buffer_ptr) as usize]);
+            }
+        };
+        let input = input.into_iter().map(|val| val as u8).collect::<Vec<_>>();
+        let input = std::str::from_utf8(input.as_slice()).expect("Could not parse input as string");
+
         let lexerdef = scanner_l::lexerdef();
         let lexer = lexerdef.lexer(&input);
         SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope());
         let (tree, errors) = parser_y::parse(&lexer);
         if !errors.is_empty() {
             for err in errors {
-                eprintln!("{}", err.pp(&lexer, &parser_y::token_epp));
+                println!("{}", err.pp(&lexer, &parser_y::token_epp));
             }
             return ExitCode::from(1);
         }
@@ -51,16 +52,19 @@ fn main() -> ExitCode {
         let tree = tree.unwrap();
         match tree {
             Ok(tree) => {
-                #[cfg(feature = "debug")]
+                #[cfg(feature = "debug-tree")]
                 println!("{:#?}", tree);
 
                 tree.print(&lexer);
-                ExitCode::SUCCESS
+                return ExitCode::SUCCESS;
             }
             Err(err) => {
                 eprintln!("{err}");
-                ExitCode::from(err.to_err_code())
+                return ExitCode::from(err.to_err_code());
             }
         }
     }
+
+    #[cfg(feature = "onlylex")]
+    ExitCode::SUCCESS
 }

@@ -4,7 +4,7 @@ use cfgrammar::Span;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
 
-use crate::errors::ParsingError;
+use crate::{ast::ASTNode, errors::ParsingError};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -12,7 +12,7 @@ pub enum SymbolEntry {
     LitFloat(SymbolLitFloat),
     LitChar(SymbolLitChar),
     LitBool(SymbolLitBool),
-    Var(SymbolVar),
+    Var(CommonAttrs),
     Arr(SymbolArr),
     Fn(SymbolFn),
 }
@@ -25,26 +25,32 @@ impl SymbolEntry {
             SymbolEntry::LitChar(content) => (content.line, content.col),
             SymbolEntry::LitBool(content) => (content.line, content.col),
             SymbolEntry::Var(content) => (content.line, content.col),
-            SymbolEntry::Arr(content) => (content.line, content.col),
-            SymbolEntry::Fn(content) => (content.line, content.col),
+            SymbolEntry::Arr(content) => (content.common.line, content.common.col),
+            SymbolEntry::Fn(content) => (content.common.line, content.common.col),
         }
     }
 
     pub fn from_untyped_var(var: UntypedVar, ty: SymbolType) -> Self {
+        SymbolEntry::Var(CommonAttrs {
+            line: var.line,
+            col: var.col,
+            size: ty.get_size(),
+            val: var.name,
+            ty,
+        })
+    }
+
+    pub fn from_untyped_global_declr(var: UntypedGlobalDeclr, ty: SymbolType) -> Self {
         match var {
-            UntypedVar::UniVar(var) => SymbolEntry::Var(SymbolVar {
-                line: var.line,
-                col: var.col,
-                size: ty.get_size(),
-                val: var.name,
-                ty,
-            }),
-            UntypedVar::ArrVar(var) => SymbolEntry::Arr(SymbolArr {
-                line: var.line,
-                col: var.col,
-                size: var.dims.iter().fold(ty.get_size(), |acc, val| acc * val),
-                val: var.name,
-                ty,
+            UntypedGlobalDeclr::Var(var) => SymbolEntry::from_untyped_var(var, ty.clone()),
+            UntypedGlobalDeclr::Arr(var) => SymbolEntry::Arr(SymbolArr {
+                common: CommonAttrs {
+                    line: var.line,
+                    col: var.col,
+                    size: var.dims.iter().fold(ty.get_size(), |acc, val| acc * val),
+                    val: var.name,
+                    ty,
+                },
                 dims: var.dims,
             }),
         }
@@ -84,34 +90,71 @@ pub struct SymbolLitBool {
 }
 
 #[derive(Debug, Clone)]
-pub struct SymbolVar {
+pub struct CommonAttrs {
     pub line: usize,
     pub col: usize,
     pub size: usize,
     pub val: String,
     pub ty: SymbolType,
+}
+
+impl CommonAttrs {
+    pub fn new(
+        name: String,
+        ty: SymbolType,
+        span: Span,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Self {
+        let ((line, col), _) = lexer.line_col(span);
+        let val = name;
+        let size = ty.get_size();
+        Self {
+            line,
+            col,
+            size,
+            val,
+            ty,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct SymbolArr {
-    pub line: usize,
-    pub col: usize,
-    pub size: usize,
-    pub val: String,
-    pub ty: SymbolType,
+    pub common: CommonAttrs,
     pub dims: Vec<usize>,
+}
+
+impl SymbolArr {
+    pub fn new(
+        name: String,
+        ty: SymbolType,
+        span: Span,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+        dims: Vec<usize>,
+    ) -> Self {
+        let common = CommonAttrs::new(name, ty, span, lexer);
+        Self { common, dims }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct SymbolFn {
-    pub line: usize,
-    pub col: usize,
-    pub size: usize,
-    pub val: String,
-    pub ty: SymbolType,
-    pub args: Option<Vec<Box<SymbolEntry>>>,
+    pub common: CommonAttrs,
+    pub args: Option<Vec<SymbolEntry>>,
 }
 
+impl SymbolFn {
+    pub fn new(
+        name: String,
+        ty: SymbolType,
+        span: Span,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+        args: Option<Vec<SymbolEntry>>,
+    ) -> Self {
+        let common = CommonAttrs::new(name, ty, span, lexer);
+        Self { common, args }
+    }
+}
 #[derive(Debug, Clone)]
 pub enum SymbolType {
     CHAR,
@@ -141,10 +184,11 @@ impl SymbolTable {
     }
 
     pub fn add_symbol(&mut self, key: String, symbol: SymbolEntry) -> Result<(), ParsingError> {
-        if let Some(symbol) = self.0.get(&key) {
-            let (line, col) = symbol.get_line_col();
+        if let Some(declared) = self.0.get(&key) {
+            let (s_line, s_col) = symbol.get_line_col();
+            let (line, col) = declared.get_line_col();
             return Err(ParsingError::ErrDeclared(format!(
-                "variable with name \"{key}\" was first declared at line {}, col {}.",
+                "at line {s_line}, col {s_col}: variable with name \"{key}\" was first declared at line {}, col {}.",
                 line, col
             )));
         }
@@ -209,8 +253,12 @@ impl ScopeStack {
                 scope_table.add_symbol(key, symbol)?;
             }
             SymbolEntry::Var(content) => scope_table.add_symbol(content.val.clone(), symbol)?,
-            SymbolEntry::Arr(content) => scope_table.add_symbol(content.val.clone(), symbol)?,
-            SymbolEntry::Fn(content) => scope_table.add_symbol(content.val.clone(), symbol)?,
+            SymbolEntry::Arr(content) => {
+                scope_table.add_symbol(content.common.val.clone(), symbol)?
+            }
+            SymbolEntry::Fn(content) => {
+                scope_table.add_symbol(content.common.val.clone(), symbol)?
+            }
         }
 
         Ok(())
@@ -218,13 +266,13 @@ impl ScopeStack {
 }
 
 #[derive(Debug)]
-pub struct UniVar {
+pub struct UntypedVar {
     pub line: usize,
     pub col: usize,
     pub name: String,
 }
 
-impl UniVar {
+impl UntypedVar {
     pub fn new(span: Span, lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
         let ((line, col), _) = lexer.line_col(span);
         let name = lexer.span_str(span).to_string();
@@ -233,14 +281,14 @@ impl UniVar {
 }
 
 #[derive(Debug)]
-pub struct ArrVar {
+pub struct UntypedArr {
     pub line: usize,
     pub col: usize,
     pub name: String,
     pub dims: Vec<usize>,
 }
 
-impl ArrVar {
+impl UntypedArr {
     pub fn new(
         span: Span,
         dims: Vec<usize>,
@@ -258,9 +306,27 @@ impl ArrVar {
 }
 
 #[derive(Debug)]
-pub enum UntypedVar {
-    UniVar(UniVar),
-    ArrVar(ArrVar),
+pub enum UntypedGlobalDeclr {
+    Var(UntypedVar),
+    Arr(UntypedArr),
+}
+
+#[derive(Debug)]
+pub struct LocalDeclrAux {
+    pub vars: Vec<UntypedVar>,
+    pub node: ASTNode,
+}
+
+impl LocalDeclrAux {
+    pub fn new(vars: Vec<UntypedVar>, node: ASTNode) -> Self {
+        Self { vars, node }
+    }
+    pub fn with_vars(vars: Vec<UntypedVar>) -> Self {
+        Self {
+            vars,
+            node: ASTNode::None,
+        }
+    }
 }
 
 pub fn int_from_span(

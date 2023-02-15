@@ -1,0 +1,7 @@
+0x7ffca87b8c88 [label="fn"];
+0x7ffca87b8c88, 0x563d64149cc8
+0x563d64149cc8 [label="="];
+0x563d64149cc8, 0x563d64149c08
+0x563d64149cc8, 0x563d64149c48
+0x563d64149c08 [label="a"];
+0x563d64149c48 [label="2"];
