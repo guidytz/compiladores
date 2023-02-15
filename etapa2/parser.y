@@ -71,10 +71,7 @@ command: command_block ';' |
          return ';' |
          flux_ctrl ';' ;
 
-var_declare: type_id ',' var_list |
-             type_id TK_OC_LE literals ',' var_list |
-             type_id |
-             type_id TK_OC_LE literals ;
+var_declare: type var_list ;
 
 var_list: TK_IDENTIFICADOR ',' var_list |
           TK_IDENTIFICADOR TK_OC_LE literals ',' var_list |
