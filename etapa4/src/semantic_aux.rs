@@ -55,13 +55,56 @@ impl SymbolEntry {
             }),
         }
     }
+
+    pub fn is_literal(&self) -> bool {
+        match self {
+            SymbolEntry::Var(_) => false,
+            SymbolEntry::Arr(_) => false,
+            SymbolEntry::Fn(_) => false,
+            _ => true,
+        }
+    }
+
+    pub fn from_lit_span(span: Span, lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
+        let str = lexer.span_str(span);
+        let ((line, col), _) = lexer.line_col(span);
+        if let Ok(lit) = str.parse::<u32>() {
+            Self::LitInt(SymbolLitInt {
+                line,
+                col,
+                size: SymbolType::INT.get_size(),
+                val: lit,
+            })
+        } else if let Ok(lit) = str.parse::<f64>() {
+            Self::LitFloat(SymbolLitFloat {
+                line,
+                col,
+                size: SymbolType::FLOAT.get_size(),
+                val: lit,
+            })
+        } else if let Ok(lit) = str.parse::<bool>() {
+            Self::LitBool(SymbolLitBool {
+                line,
+                col,
+                size: SymbolType::BOOL.get_size(),
+                val: lit,
+            })
+        } else {
+            Self::LitChar(SymbolLitChar {
+                line,
+                col,
+                size: SymbolType::CHAR.get_size(),
+                val: str.to_owned(),
+            })
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct SymbolLitInt {
     pub line: usize,
     pub col: usize,
-    pub size: usize,
+    pub size: u32,
     pub val: u32,
 }
 
@@ -69,7 +112,7 @@ pub struct SymbolLitInt {
 pub struct SymbolLitFloat {
     pub line: usize,
     pub col: usize,
-    pub size: usize,
+    pub size: u32,
     pub val: f64,
 }
 
@@ -77,15 +120,15 @@ pub struct SymbolLitFloat {
 pub struct SymbolLitChar {
     pub line: usize,
     pub col: usize,
-    pub size: usize,
-    pub val: char,
+    pub size: u32,
+    pub val: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct SymbolLitBool {
     pub line: usize,
     pub col: usize,
-    pub size: usize,
+    pub size: u32,
     pub val: bool,
 }
 
@@ -93,7 +136,7 @@ pub struct SymbolLitBool {
 pub struct CommonAttrs {
     pub line: usize,
     pub col: usize,
-    pub size: usize,
+    pub size: u32,
     pub val: String,
     pub ty: SymbolType,
 }
@@ -121,7 +164,7 @@ impl CommonAttrs {
 #[derive(Debug, Clone)]
 pub struct SymbolArr {
     pub common: CommonAttrs,
-    pub dims: Vec<usize>,
+    pub dims: Vec<u32>,
 }
 
 impl SymbolArr {
@@ -130,7 +173,7 @@ impl SymbolArr {
         ty: SymbolType,
         span: Span,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
-        dims: Vec<usize>,
+        dims: Vec<u32>,
     ) -> Self {
         let common = CommonAttrs::new(name, ty, span, lexer);
         Self { common, dims }
@@ -164,12 +207,12 @@ pub enum SymbolType {
 }
 
 impl SymbolType {
-    pub fn get_size(&self) -> usize {
+    pub fn get_size(&self) -> u32 {
         match self {
-            SymbolType::CHAR => 1usize,
-            SymbolType::INT => 4usize,
-            SymbolType::FLOAT => 8usize,
-            SymbolType::BOOL => 1usize,
+            SymbolType::CHAR => 1,
+            SymbolType::INT => 4,
+            SymbolType::FLOAT => 8,
+            SymbolType::BOOL => 1,
         }
     }
 }
@@ -185,6 +228,10 @@ impl SymbolTable {
 
     pub fn add_symbol(&mut self, key: String, symbol: SymbolEntry) -> Result<(), ParsingError> {
         if let Some(declared) = self.0.get(&key) {
+            if declared.is_literal() {
+                return Ok(());
+            }
+
             let (s_line, s_col) = symbol.get_line_col();
             let (line, col) = declared.get_line_col();
             return Err(ParsingError::ErrDeclared(format!(
@@ -234,6 +281,9 @@ impl ScopeStack {
     }
 
     pub fn add_symbol(&mut self, symbol: SymbolEntry) -> Result<(), ParsingError> {
+        #[cfg(feature = "debug")]
+        println!("Before adding: {self:#?}");
+
         let scope_table = self.0.last_mut().ok_or(ParsingError::NoScope)?;
         match &symbol {
             SymbolEntry::LitInt(content) => {
@@ -261,6 +311,9 @@ impl ScopeStack {
             }
         }
 
+        #[cfg(feature = "debug")]
+        println!("After adding: {self:#?}");
+
         Ok(())
     }
 }
@@ -285,13 +338,13 @@ pub struct UntypedArr {
     pub line: usize,
     pub col: usize,
     pub name: String,
-    pub dims: Vec<usize>,
+    pub dims: Vec<u32>,
 }
 
 impl UntypedArr {
     pub fn new(
         span: Span,
-        dims: Vec<usize>,
+        dims: Vec<u32>,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Self {
         let ((line, col), _) = lexer.line_col(span);
@@ -332,7 +385,31 @@ impl LocalDeclrAux {
 pub fn int_from_span(
     span: Span,
     lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
-) -> Result<usize, ParsingError> {
+) -> Result<u32, ParsingError> {
+    let value = lexer.span_str(span).parse()?;
+    Ok(value)
+}
+
+pub fn float_from_span(
+    span: Span,
+    lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+) -> Result<f64, ParsingError> {
+    let value = lexer.span_str(span).parse()?;
+    Ok(value)
+}
+
+pub fn char_from_span(
+    span: Span,
+    lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+) -> Result<char, ParsingError> {
+    let value = lexer.span_str(span).parse()?;
+    Ok(value)
+}
+
+pub fn bool_from_span(
+    span: Span,
+    lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+) -> Result<bool, ParsingError> {
     let value = lexer.span_str(span).parse()?;
     Ok(value)
 }

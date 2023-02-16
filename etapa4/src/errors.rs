@@ -1,4 +1,8 @@
-use std::num::ParseIntError;
+use std::{
+    char::ParseCharError,
+    num::{ParseFloatError, ParseIntError},
+    str::ParseBoolError,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParsingError {
@@ -25,6 +29,12 @@ pub enum ParsingError {
 
     #[error("Parse int error: {0}")]
     ParseIntError(#[from] ParseIntError),
+    #[error("Parse float error: {0}")]
+    ParseFloatError(#[from] ParseFloatError),
+    #[error("Parse char error: {0}")]
+    ParseCharError(#[from] ParseCharError),
+    #[error("Parse bool error: {0}")]
+    ParseBoolError(#[from] ParseBoolError),
     #[error("Span get error: {0}")]
     SpanError(String),
     #[error("Add next to None node error: {0}")]

@@ -377,11 +377,31 @@ ident -> Result<ASTNode, ParsingError>:
         "TK_IDENTIFICADOR" { Ok(ASTNode::Identifier(Identifier::new($span)))} ;
 
 literals -> Result<ASTNode, ParsingError>:
-        "TK_LIT_INT"      { Ok(ASTNode::LitInt(LitInt::new($span))) } |
-        "TK_LIT_FLOAT"    { Ok(ASTNode::LitFloat(LitFloat::new($span))) } |
-        "TK_LIT_CHAR"     { Ok(ASTNode::LitChar(LitChar::new($span))) } |
-        "TK_LIT_TRUE"     { Ok(ASTNode::LitBool(LitBool::new($span))) } |
-        "TK_LIT_FALSE"    { Ok(ASTNode::LitBool(LitBool::new($span))) } ;
+        "TK_LIT_INT" {
+                let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                Ok(ASTNode::LitInt(LitInt::new($span)))
+        } |
+        "TK_LIT_FLOAT" {
+                let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                Ok(ASTNode::LitFloat(LitFloat::new($span)))
+        } |
+        "TK_LIT_CHAR" {
+                let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                Ok(ASTNode::LitChar(LitChar::new($span)))
+        } |
+        "TK_LIT_TRUE" {
+                let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                Ok(ASTNode::LitBool(LitBool::new($span)))
+        } |
+        "TK_LIT_FALSE" {
+                let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                Ok(ASTNode::LitBool(LitBool::new($span)))
+        } ;
 
 type -> Result<SymbolType, ParsingError>:
         "TK_PR_INT" { Ok(SymbolType::INT) } |
@@ -389,7 +409,7 @@ type -> Result<SymbolType, ParsingError>:
         "TK_PR_BOOL" { Ok(SymbolType::BOOL) } |
         "TK_PR_CHAR"  { Ok(SymbolType::CHAR) } ;
 
-multidim -> Result<Vec<usize>, ParsingError>:
+multidim -> Result<Vec<u32>, ParsingError>:
         lit_int_val '^' multidim {
                 let mut dim = vec![$1?];
                 dim.extend($3?);
@@ -397,8 +417,12 @@ multidim -> Result<Vec<usize>, ParsingError>:
         } |
         lit_int_val { Ok(vec![$1?]) } ;
 
-lit_int_val -> Result<usize, ParsingError>:
-        "TK_LIT_INT" { int_from_span($span, $lexer) } ;
+lit_int_val -> Result<u32, ParsingError>:
+        "TK_LIT_INT" {
+                let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                int_from_span($span, $lexer)
+        } ;
 
 begin_scope -> Result<(), ParsingError>:
         %empty {
@@ -408,19 +432,7 @@ begin_scope -> Result<(), ParsingError>:
 
 end_scope -> Result<(), ParsingError>:
         %empty {
-                #[cfg(feature = "debug")]
-                {
-                        print!("Finishing scope. Stack: ");
-                        print_stack!()
-                }
-
                 SCOPE_STACK.with(|stack| stack.borrow_mut().pop_scope());
-
-                #[cfg(feature = "debug")]
-                {
-                        print!("Stack  after: ");
-                        print_stack!()
-                }
                 Ok(())
         };
 
