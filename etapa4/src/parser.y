@@ -67,6 +67,12 @@ name_list -> Result<Vec<UntypedGlobalDeclr>, ParsingError>:
 function -> Result<ASTNode, ParsingError>:
         type ident fun_params fn_command_block {
                 let ident = $2?;
+
+                let ty = $1?;
+                let name = $lexer.span_str(ident.span()?).to_string();
+                let args = $3?;
+                let entry = SymbolEntry::Fn(SymbolFn::new(name, ty, $span, $lexer, args));
+                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(entry))?;
                 let comm = Box::new($4?);
                 let node = FnDeclare::new($span, comm, ident.span()?);
                 Ok(ASTNode::FnDeclare(node))
@@ -173,12 +179,14 @@ var_list -> Result<LocalDeclrAux, ParsingError>:
 attrib -> Result<ASTNode, ParsingError>:
         ident '=' expr {
                 let ident = Box::new($1?);
+                check_declaration(&ident, $lexer)?;
                 let expr = Box::new($3?);
                 let node = CommAttrib::new($span, ident, expr);
                 Ok(ASTNode::CommAttrib(node))
         } |
         arr_ident '=' expr  {
                 let ident = Box::new($1?);
+                check_declaration(&ident, $lexer)?;
                 let expr = Box::new($3?);
                 let node = CommAttrib::new($span, ident, expr);
                 Ok(ASTNode::CommAttrib(node))
@@ -188,11 +196,13 @@ fun_call -> Result<ASTNode, ParsingError>:
         ident '(' arg_list ')' {
                 let expr = Box::new($3?);
                 let ident = $1?;
+                check_declaration(&ident, $lexer)?;
                 let node = CommFnCall::new($span, expr, ident.span()?);
                 Ok(ASTNode::CommFnCall(node))
         } |
         ident '(' ')'  {
                 let ident = $1?;
+                check_declaration(&ident, $lexer)?;
                 let node = CommFnCall::new($span, Box::new(ASTNode::None), ident.span()?);
                 Ok(ASTNode::CommFnCall(node))
         } ;
@@ -360,10 +370,22 @@ exp_end -> Result<ASTNode, ParsingError>:
         operand         { $1 } ;
 
 operand -> Result<ASTNode, ParsingError>:
-        ident           { $1 } |
-        arr_ident       { $1 } |
+        ident           {
+                let ident = $1?;
+                check_declaration(&ident, $lexer)?;
+                Ok(ident)
+        } |
+        arr_ident       {
+                let ident = $1?;
+                check_declaration(&ident, $lexer)?;
+                Ok(ident)
+        } |
         literals        { $1 } |
-        fun_call        { $1 } ;
+        fun_call        {
+                let ident = $1?;
+                check_declaration(&ident, $lexer)?;
+                Ok(ident)
+        } ;
 
 arr_ident -> Result<ASTNode, ParsingError>:
         ident '[' exp_list ']' {
@@ -464,8 +486,10 @@ use etapa4::{ast::{
                        UntypedGlobalDeclr,
                        SymbolType,
                        SymbolEntry,
+                       SymbolFn,
                        CommonAttrs,
-                       LocalDeclrAux}};
+                       LocalDeclrAux,
+                       check_declaration}};
 
 macro_rules! empty_node {
         () => {

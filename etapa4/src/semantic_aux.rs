@@ -4,7 +4,7 @@ use cfgrammar::Span;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
 
-use crate::{ast::ASTNode, errors::ParsingError};
+use crate::{ast::ASTNode, errors::ParsingError, SCOPE_STACK};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -18,6 +18,18 @@ pub enum SymbolEntry {
 }
 
 impl SymbolEntry {
+    pub fn type_str(&self) -> &'static str {
+        match self {
+            SymbolEntry::LitInt(_) => "literal int",
+            SymbolEntry::LitFloat(_) => "literal float",
+            SymbolEntry::LitChar(_) => "literal char",
+            SymbolEntry::LitBool(_) => "literal bool",
+            SymbolEntry::Var(_) => "variable",
+            SymbolEntry::Arr(_) => "array",
+            SymbolEntry::Fn(_) => "function",
+        }
+    }
+
     pub fn get_line_col(&self) -> (usize, usize) {
         match self {
             SymbolEntry::LitInt(content) => (content.line, content.col),
@@ -235,8 +247,8 @@ impl SymbolTable {
             let (s_line, s_col) = symbol.get_line_col();
             let (line, col) = declared.get_line_col();
             return Err(ParsingError::ErrDeclared(format!(
-                "at line {s_line}, col {s_col}: variable with name \"{key}\" was first declared at line {}, col {}.",
-                line, col
+                "{} at line {s_line}, col {s_col}: {} with identifier \"{key}\" was first declared at line {}, col {}.",
+                symbol.type_str(), declared.type_str(), line, col
             )));
         }
 
@@ -259,16 +271,22 @@ impl ScopeStack {
         Self(vec![])
     }
 
-    pub fn get_symbol(&self, key: String, _span: Span) -> Result<SymbolEntry, ParsingError> {
+    pub fn get_symbol(
+        &self,
+        span: Span,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<SymbolEntry, ParsingError> {
+        let key = lexer.span_str(span).to_string();
         for table in self.0.iter().rev() {
             match table.get(&key) {
                 Some(symbol) => return Ok(symbol.clone()),
                 None => continue,
             }
         }
+        let ((line, col), _) = lexer.line_col(span);
 
-        Err(ParsingError::ErrDeclared(format!(
-            "variable with name \"{key}\" was never declared"
+        Err(ParsingError::ErrUndeclared(format!(
+            "Identifier with name \"{key}\" at line {line}, col {col} was never declared"
         )))
     }
 
@@ -412,4 +430,12 @@ pub fn bool_from_span(
 ) -> Result<bool, ParsingError> {
     let value = lexer.span_str(span).parse()?;
     Ok(value)
+}
+
+pub fn check_declaration(
+    ident: &ASTNode,
+    lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+) -> Result<(), ParsingError> {
+    SCOPE_STACK.with(|stack| stack.borrow().get_symbol(ident.span()?, lexer))?;
+    Ok(())
 }
