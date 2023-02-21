@@ -1,6 +1,0 @@
-int fun() {
-    int a <= 2;
-    float b <= 2.3e-1;
-    bool c <= true;
-    char d <= 'a';
-}

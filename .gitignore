@@ -23,6 +23,7 @@ parser.tab.*
 # Outros arquivos
 **/old*
 **/out*
+!/test_data/**
 
 # Ignore rust target
 target

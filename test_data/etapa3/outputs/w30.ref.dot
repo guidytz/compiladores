@@ -1,0 +1,30 @@
+digraph {
+label="Ref";
+g -> at
+at [label = "="];
+at -> vetor
+z [label = "z"];
+at -> z
+vetor [label = "[]"];
+vetor -> v
+vetor -> n2
+
+n2 -> n1
+n2 -> c
+
+n1 -> a
+n1 -> b
+
+
+n1 [label = "^"];
+n2 [label = "^"];
+
+a [label="a"];
+b [label="b"];
+c [label="c"];
+v [label="v"];
+z [label="z"];
+g [label="f"];
+
+
+}

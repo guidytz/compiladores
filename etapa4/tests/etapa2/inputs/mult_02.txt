@@ -1,6 +1,0 @@
-int fat(int n) {
-    if (n == 1) then {
-        return 1;
-    };
-    return n * fat(n - 1);
-}

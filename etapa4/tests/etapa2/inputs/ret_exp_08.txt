@@ -1,3 +1,0 @@
-float func() {
-    return id[a+b^2.5*c^9];
-}

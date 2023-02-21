@@ -1,0 +1,5 @@
+int f(){
+  int a, b, c <= 3, d, e <= 4;
+  a = 3;
+  return 10;
+}

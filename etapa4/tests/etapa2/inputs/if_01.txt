@@ -1,7 +1,0 @@
-int fun(int num) {
-    if (num > 2) then {
-        a = 1;
-    } else {
-        a = 0;
-    };
-}

@@ -1,1 +1,0 @@
-bool fun() { bool a, b, c; }

@@ -1,0 +1,7 @@
+int va;
+int fa (float k, int l) 
+{
+  int a;
+}
+int vb[100];
+char vc;

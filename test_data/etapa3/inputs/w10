@@ -1,0 +1,8 @@
+int v[10];
+int g() {
+}
+int b;
+int z;
+int f() {
+}
+int k;

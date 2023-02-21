@@ -1,8 +1,0 @@
-int fn (int a, int b) {
-    int i <= 0;
-    while (a < b) {
-        i = i + 1;
-        a = a + 1;
-    }
-    return i;
-}

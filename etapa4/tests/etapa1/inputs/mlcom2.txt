@@ -1,3 +1,0 @@
-test /* this comment should not be considered
-this line continues the comment int 1 2 3 . 'a'
-*/ ident 1

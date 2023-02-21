@@ -1,5 +1,0 @@
-int fn() {
-    int func() {
-        a = 0;
-    };
-}

@@ -1,0 +1,26 @@
+digraph {
+label="Ref";
+ff -> ia
+ia -> ib
+ib -> at
+at -> re
+ff [label = "f"];
+ia [label = "<="];
+ib [label = "<="];
+at [label = "="];
+re [label = "return"];
+ia -> c
+ia -> tres
+c [label = "c"];
+tres [label = "3"];
+ib -> e
+ib -> quatro
+e [label = "e"];
+quatro [label = "4"];
+at -> a
+at -> tres2
+a [label = "a"];
+tres2 [label = "3"];
+re -> dez
+dez [label = "10"];
+}

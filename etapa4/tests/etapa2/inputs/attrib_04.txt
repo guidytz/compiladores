@@ -1,3 +1,0 @@
-float fn() {
-    ident[1+2^a/b^-b] = ident[d^g<=a^3];
-}
