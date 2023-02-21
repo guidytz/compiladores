@@ -9,8 +9,10 @@ mod test {
 
     #[test]
     fn test_etapa1() {
-        let inputs = std::fs::read_dir("./tests/etapa1/inputs").unwrap();
-        let outputs = std::fs::read_dir("./tests/etapa1/outputs").unwrap();
+        let inputs =
+            std::fs::read_dir("../test_data/etapa1/inputs").expect("Could not read input dir");
+        let outputs =
+            std::fs::read_dir("../test_data/etapa1/outputs").expect("Could not output read dir");
 
         for (input, output) in inputs.into_iter().zip(outputs) {
             match (input, output) {
