@@ -432,10 +432,75 @@ pub fn bool_from_span(
     Ok(value)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UsageType {
+    Var,
+    Arr,
+    FnCall,
+}
+
+impl ToString for UsageType {
+    fn to_string(&self) -> String {
+        match self {
+            UsageType::Var => "variable".to_owned(),
+            UsageType::Arr => "array".to_owned(),
+            UsageType::FnCall => "function".to_owned(),
+        }
+    }
+}
+
 pub fn check_declaration(
     ident: &ASTNode,
     lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    usage: UsageType,
 ) -> Result<(), ParsingError> {
-    SCOPE_STACK.with(|stack| stack.borrow().get_symbol(ident.span()?, lexer))?;
-    Ok(())
+    let symbol = SCOPE_STACK.with(|stack| stack.borrow().get_symbol(ident.span()?, lexer))?;
+    match symbol {
+        SymbolEntry::Var(content) if usage != UsageType::Var => {
+            let declr_line = content.line;
+            let declr_col = content.col;
+            let ((usage_line, usage_col), _) = lexer.line_col(ident.span()?);
+
+            Err(ParsingError::ErrVariable(format!(
+                "Atempting to use indent \"{}\" as {} at line {}, col {}. This identifier was declared as variable at line {}, col {}.",
+                content.val,
+                usage.to_string(),
+                usage_line,
+                usage_col,
+                declr_line,
+                declr_col
+            )))
+        }
+        SymbolEntry::Arr(content) if usage != UsageType::Arr => {
+            let declr_line = content.common.line;
+            let declr_col = content.common.col;
+            let ((usage_line, usage_col), _) = lexer.line_col(ident.span()?);
+
+            Err(ParsingError::ErrVariable(format!(
+                "Atempting to use indent \"{}\" as {} at line {}, col {}. This identifier was declared as array at line {}, col {}.",
+                content.common.val,
+                usage.to_string(),
+                usage_line,
+                usage_col,
+                declr_line,
+                declr_col
+            )))
+        }
+        SymbolEntry::Fn(content) if usage != UsageType::FnCall => {
+            let declr_line = content.common.line;
+            let declr_col = content.common.col;
+            let ((usage_line, usage_col), _) = lexer.line_col(ident.span()?);
+
+            Err(ParsingError::ErrVariable(format!(
+                "Atempting to use indent \"{}\" as {} at line {}, col {}. This identifier was declared as function at line {}, col {}.",
+                content.common.val,
+                usage.to_string(),
+                usage_line,
+                usage_col,
+                declr_line,
+                declr_col
+            )))
+        }
+        _ => Ok(()),
+    }
 }

@@ -177,16 +177,15 @@ var_list -> Result<LocalDeclrAux, ParsingError>:
         } ;
 
 attrib -> Result<ASTNode, ParsingError>:
-        ident '=' expr {
+        checked_ident '=' expr {
                 let ident = Box::new($1?);
-                check_declaration(&ident, $lexer)?;
                 let expr = Box::new($3?);
                 let node = CommAttrib::new($span, ident, expr);
                 Ok(ASTNode::CommAttrib(node))
         } |
         arr_ident '=' expr  {
                 let ident = Box::new($1?);
-                check_declaration(&ident, $lexer)?;
+                check_declaration(&ident, $lexer, UsageType::Arr)?;
                 let expr = Box::new($3?);
                 let node = CommAttrib::new($span, ident, expr);
                 Ok(ASTNode::CommAttrib(node))
@@ -196,13 +195,13 @@ fun_call -> Result<ASTNode, ParsingError>:
         ident '(' arg_list ')' {
                 let expr = Box::new($3?);
                 let ident = $1?;
-                check_declaration(&ident, $lexer)?;
+                check_declaration(&ident, $lexer, UsageType::FnCall)?;
                 let node = CommFnCall::new($span, expr, ident.span()?);
                 Ok(ASTNode::CommFnCall(node))
         } |
         ident '(' ')'  {
                 let ident = $1?;
-                check_declaration(&ident, $lexer)?;
+                check_declaration(&ident, $lexer, UsageType::FnCall)?;
                 let node = CommFnCall::new($span, Box::new(ASTNode::None), ident.span()?);
                 Ok(ASTNode::CommFnCall(node))
         } ;
@@ -370,26 +369,22 @@ exp_end -> Result<ASTNode, ParsingError>:
         operand         { $1 } ;
 
 operand -> Result<ASTNode, ParsingError>:
-        ident           {
-                let ident = $1?;
-                check_declaration(&ident, $lexer)?;
-                Ok(ident)
-        } |
-        arr_ident       {
-                let ident = $1?;
-                check_declaration(&ident, $lexer)?;
-                Ok(ident)
-        } |
+        checked_ident   { $1 } |
+        arr_ident       { $1 } |
         literals        { $1 } |
-        fun_call        {
+        fun_call        { $1 } ;
+
+checked_ident -> Result<ASTNode, ParsingError>:
+        ident {
                 let ident = $1?;
-                check_declaration(&ident, $lexer)?;
+                check_declaration(&ident, $lexer, UsageType::Var)?;
                 Ok(ident)
         } ;
 
 arr_ident -> Result<ASTNode, ParsingError>:
         ident '[' exp_list ']' {
                 let ident = Box::new($1?);
+                check_declaration(&ident, $lexer, UsageType::Arr)?;
                 let expr_tree = Box::new($3?);
                 let node = ArrIdx::new($span, ident, expr_tree);
                 Ok(ASTNode::ArrIdx(node))
@@ -489,6 +484,7 @@ use etapa4::{ast::{
                        SymbolFn,
                        CommonAttrs,
                        LocalDeclrAux,
+                       UsageType,
                        check_declaration}};
 
 macro_rules! empty_node {
