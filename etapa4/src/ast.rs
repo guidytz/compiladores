@@ -2,7 +2,11 @@ use cfgrammar::Span;
 use lrlex::{DefaultLexerTypes, LRNonStreamingLexer};
 use lrpar::NonStreamingLexer;
 
-use crate::errors::ParsingError;
+use crate::{
+    errors::ParsingError,
+    semantic_aux::{try_coersion, Type},
+    SCOPE_STACK,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ASTNode {
@@ -153,94 +157,94 @@ impl ASTNode {
         Ok(ast_node)
     }
 
-    pub fn print_label(&self, lexer: &LRNonStreamingLexer<DefaultLexerTypes>) {
+    pub fn label_string(&self, lexer: &LRNonStreamingLexer<DefaultLexerTypes>) -> String {
         if *self == ASTNode::None {
             // Empty node has no label as it is not essentially a real node
-            return;
+            return "".to_string();
         }
 
-        println!("{}", self.label(lexer));
+        format!("{}\n", self.label(lexer))
     }
 
-    pub fn print(&self, lexer: &LRNonStreamingLexer<DefaultLexerTypes>) {
-        self.print_label(lexer);
+    pub fn to_string(&self, lexer: &LRNonStreamingLexer<DefaultLexerTypes>) -> String {
+        let mut str = self.label_string(lexer);
         match self {
             ASTNode::FnDeclare(node) => {
-                node.comm.print_parent(&self);
-                node.next_fn.print_parent(&self);
+                str += &node.comm.parent_string(&self);
+                str += &node.next_fn.parent_string(&self);
 
-                node.comm.print(lexer);
-                node.next_fn.print(lexer);
+                str += &node.comm.to_string(lexer);
+                str += &node.next_fn.to_string(lexer);
             }
             ASTNode::VarInit(node) => {
-                node.ident.print_parent(&self);
-                node.lit.print_parent(&self);
+                str += &node.ident.parent_string(&self);
+                str += &node.lit.parent_string(&self);
                 if let Some(next) = &node.next {
-                    next.print_parent(&self);
+                    str += &next.parent_string(&self);
                 }
 
-                node.ident.print(lexer);
-                node.lit.print(lexer);
+                str += &node.ident.to_string(lexer);
+                str += &node.lit.to_string(lexer);
                 if let Some(next) = &node.next {
-                    next.print(lexer);
+                    str += &next.to_string(lexer);
                 }
             }
             ASTNode::CommAttrib(node) => {
-                node.ident.print_parent(&self);
-                node.expr.print_parent(&self);
-                node.next.print_parent(&self);
+                str += &node.ident.parent_string(&self);
+                str += &node.expr.parent_string(&self);
+                str += &node.next.parent_string(&self);
 
-                node.ident.print(lexer);
-                node.expr.print(lexer);
-                node.next.print(lexer);
+                str += &node.ident.to_string(lexer);
+                str += &node.expr.to_string(lexer);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::CommFnCall(node) => {
-                node.expr.print_parent(&self);
-                node.next.print_parent(&self);
+                str += &node.expr.parent_string(&self);
+                str += &node.next.parent_string(&self);
 
-                node.expr.print(lexer);
-                node.next.print(lexer);
+                str += &node.expr.to_string(lexer);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::CommReturn(node) => {
-                node.expr.print_parent(&self);
+                str += &node.expr.parent_string(&self);
 
-                node.expr.print(lexer);
+                str += &node.expr.to_string(lexer);
             }
             ASTNode::CommIf(node) => {
-                node.expr.print_parent(&self);
-                node.true_fst_comm.print_parent(&self);
-                node.false_fst_comm.print_parent(&self);
-                node.next.print_parent(&self);
+                str += &node.expr.parent_string(&self);
+                str += &node.true_fst_comm.parent_string(&self);
+                str += &node.false_fst_comm.parent_string(&self);
+                str += &node.next.parent_string(&self);
 
-                node.expr.print(lexer);
-                node.true_fst_comm.print(lexer);
-                node.false_fst_comm.print(lexer);
-                node.next.print(lexer);
+                str += &node.expr.to_string(lexer);
+                str += &node.true_fst_comm.to_string(lexer);
+                str += &node.false_fst_comm.to_string(lexer);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::CommWhile(node) => {
-                node.expr.print_parent(&self);
-                node.fst_comm.print_parent(&self);
-                node.next.print_parent(&self);
+                str += &node.expr.parent_string(&self);
+                str += &node.fst_comm.parent_string(&self);
+                str += &node.next.parent_string(&self);
 
-                node.expr.print(lexer);
-                node.fst_comm.print(lexer);
-                node.next.print(lexer);
+                str += &node.expr.to_string(lexer);
+                str += &node.fst_comm.to_string(lexer);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::ArrIdx(node) => {
-                node.ident.print_parent(&self);
-                node.expr_tree.print_parent(&self);
-                node.next.print_parent(&self);
+                str += &node.ident.parent_string(&self);
+                str += &node.expr_tree.parent_string(&self);
+                str += &node.next.parent_string(&self);
 
-                node.ident.print(lexer);
-                node.expr_tree.print(lexer);
-                node.next.print(lexer);
+                str += &node.ident.to_string(lexer);
+                str += &node.expr_tree.to_string(lexer);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::ExprIdxNode(node) => {
-                node.child_left.print_parent(&self);
-                node.child_right.print_parent(&self);
+                str += &node.child_left.parent_string(&self);
+                str += &node.child_right.parent_string(&self);
 
-                node.child_left.print(lexer);
-                node.child_right.print(lexer);
+                str += &node.child_left.to_string(lexer);
+                str += &node.child_right.to_string(lexer);
             }
             ASTNode::ExprOr(node)
             | ASTNode::ExprAnd(node)
@@ -255,51 +259,52 @@ impl ASTNode {
             | ASTNode::ExprMul(node)
             | ASTNode::ExprDiv(node)
             | ASTNode::ExprMod(node) => {
-                node.child_left.print_parent(&self);
-                node.child_right.print_parent(&self);
-                node.next.print_parent(&self);
+                str += &node.child_left.parent_string(&self);
+                str += &node.child_right.parent_string(&self);
+                str += &node.next.parent_string(&self);
 
-                node.child_left.print(lexer);
-                node.child_right.print(lexer);
-                node.next.print(lexer);
+                str += &node.child_left.to_string(lexer);
+                str += &node.child_right.to_string(lexer);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::ExprNeg(node) | ASTNode::ExprInv(node) => {
-                node.child.print_parent(&self);
-                node.next.print_parent(&self);
+                str += &node.child.parent_string(&self);
+                str += &node.next.parent_string(&self);
 
-                node.child.print(lexer);
-                node.next.print(lexer);
+                str += &node.child.to_string(lexer);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::LitInt(node) => {
-                node.next.print_parent(&self);
-                node.next.print(lexer);
+                str += &node.next.parent_string(&self);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::LitFloat(node) => {
-                node.next.print_parent(&self);
-                node.next.print(lexer);
+                str += &node.next.parent_string(&self);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::LitChar(node) => {
-                node.next.print_parent(&self);
-                node.next.print(lexer);
+                str += &node.next.parent_string(&self);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::LitBool(node) => {
-                node.next.print_parent(&self);
-                node.next.print(lexer);
+                str += &node.next.parent_string(&self);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::Identifier(node) => {
-                node.next.print_parent(&self);
-                node.next.print(lexer);
+                str += &node.next.parent_string(&self);
+                str += &node.next.to_string(lexer);
             }
             ASTNode::None => { /* NOT A REAL NODE */ }
         }
+        str
     }
 
-    fn print_parent(&self, parent: &ASTNode) {
+    fn parent_string(&self, parent: &ASTNode) -> String {
         if *self == ASTNode::None {
             // Empty node has no parent as it is not essentially a real node
-            return;
+            return "".to_string();
         }
-        println!("{}, {}", parent.addr(), self.addr());
+        format!("{}, {}\n", parent.addr(), self.addr())
     }
 
     fn addr(&self) -> String {
@@ -342,7 +347,12 @@ impl ASTNode {
             ASTNode::FnDeclare(node) => lexer.span_str(node.name).to_owned(),
             ASTNode::VarInit(_) => "<=".to_owned(),
             ASTNode::CommAttrib(_) => "=".to_owned(),
-            ASTNode::CommFnCall(node) => format!("call {}", lexer.span_str(node.name)),
+            ASTNode::CommFnCall(node) => {
+                format!(
+                    "call {}",
+                    lexer.span_str(node.name.span().expect("Could not get function call name"))
+                )
+            }
             ASTNode::CommReturn(_) => "return".to_owned(),
             ASTNode::CommIf(_) => "if".to_owned(),
             ASTNode::CommWhile(_) => "while".to_owned(),
@@ -412,6 +422,55 @@ impl ASTNode {
             )),
         }
     }
+
+    fn get_type(&self) -> Type {
+        match self {
+            ASTNode::VarInit(node) => node.ty.clone(),
+            ASTNode::CommAttrib(node) => node.ty.clone(),
+            ASTNode::CommFnCall(node) => node.ty.clone(),
+            ASTNode::CommReturn(node) => node.ty.clone(),
+            ASTNode::CommIf(node) => node.ty.clone(),
+            ASTNode::CommWhile(node) => node.ty.clone(),
+            ASTNode::ArrIdx(node) => node.ty.clone(),
+            ASTNode::ExprIdxNode(node) => node.ty.clone(),
+            ASTNode::ExprOr(node) => node.ty.clone(),
+            ASTNode::ExprAnd(node) => node.ty.clone(),
+            ASTNode::ExprEq(node) => node.ty.clone(),
+            ASTNode::ExprNeq(node) => node.ty.clone(),
+            ASTNode::ExprLt(node) => node.ty.clone(),
+            ASTNode::ExprGt(node) => node.ty.clone(),
+            ASTNode::ExprLe(node) => node.ty.clone(),
+            ASTNode::ExprGe(node) => node.ty.clone(),
+            ASTNode::ExprAdd(node) => node.ty.clone(),
+            ASTNode::ExprSub(node) => node.ty.clone(),
+            ASTNode::ExprMul(node) => node.ty.clone(),
+            ASTNode::ExprDiv(node) => node.ty.clone(),
+            ASTNode::ExprMod(node) => node.ty.clone(),
+            ASTNode::ExprNeg(node) => node.ty.clone(),
+            ASTNode::ExprInv(node) => node.ty.clone(),
+            ASTNode::Identifier(node) => node.ty.clone(),
+            ASTNode::LitInt(_) => Type::INT,
+            ASTNode::LitFloat(_) => Type::FLOAT,
+            ASTNode::LitChar(_) => Type::CHAR,
+            ASTNode::LitBool(_) => Type::BOOL,
+            ASTNode::FnDeclare(_) => Type::UNKNOWN,
+            ASTNode::None => Type::UNKNOWN,
+        }
+    }
+
+    pub fn update_type(
+        self,
+        ty: Type,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        match self {
+            ASTNode::VarInit(node) => {
+                let node = node.update_type(ty, lexer)?;
+                Ok(ASTNode::VarInit(node))
+            }
+            _ => Ok(self), // other nodes don't update types
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -443,6 +502,7 @@ pub struct VarInit {
     pub ident: Box<ASTNode>,
     pub lit: Box<ASTNode>,
     pub next: Option<Box<ASTNode>>,
+    pub ty: Type,
 }
 
 impl VarInit {
@@ -452,11 +512,14 @@ impl VarInit {
         lit: Box<ASTNode>,
         next: Option<Box<ASTNode>>,
     ) -> Self {
+        // identifier was not added to the symbol table at this point, type inference must be done later
+        let ty = Type::UNKNOWN;
         Self {
             span,
             ident,
             lit,
             next,
+            ty,
         }
     }
 
@@ -472,6 +535,21 @@ impl VarInit {
         }
         Ok(())
     }
+
+    pub fn update_type(
+        self,
+        ty: Type,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        let mut node = self.clone();
+        try_coersion(ty.clone(), node.lit.get_type(), node.span, lexer)?;
+        node.ty = ty.clone();
+        if let Some(next) = self.next.clone() {
+            let next = next.update_type(ty, lexer)?;
+            node.next = Some(Box::new(next));
+        }
+        Ok(node)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -480,16 +558,25 @@ pub struct CommAttrib {
     pub ident: Box<ASTNode>,
     pub expr: Box<ASTNode>,
     pub next: Box<ASTNode>,
+    ty: Type,
 }
 
 impl CommAttrib {
-    pub fn new(span: Span, ident: Box<ASTNode>, expr: Box<ASTNode>) -> Self {
-        Self {
+    pub fn new(
+        span: Span,
+        ident: Box<ASTNode>,
+        expr: Box<ASTNode>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        try_coersion(ident.get_type(), expr.get_type(), span, lexer)?;
+        let ty = ident.get_type();
+        Ok(Self {
             span,
             ident,
             expr,
             next: Box::new(ASTNode::None),
-        }
+            ty,
+        })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
@@ -502,16 +589,19 @@ pub struct CommFnCall {
     pub span: Span,
     pub expr: Box<ASTNode>,
     pub next: Box<ASTNode>,
-    pub name: Span,
+    pub name: Box<ASTNode>,
+    pub ty: Type,
 }
 
 impl CommFnCall {
-    pub fn new(span: Span, expr: Box<ASTNode>, name: Span) -> Self {
+    pub fn new(span: Span, expr: Box<ASTNode>, ident: Box<ASTNode>) -> Self {
+        let ty = ident.get_type();
         Self {
             span,
             expr,
-            name,
+            name: ident,
             next: Box::new(ASTNode::None),
+            ty,
         }
     }
 
@@ -524,11 +614,13 @@ impl CommFnCall {
 pub struct CommReturn {
     pub span: Span,
     pub expr: Box<ASTNode>,
+    ty: Type,
 }
 
 impl CommReturn {
     pub fn new(span: Span, expr: Box<ASTNode>) -> Self {
-        Self { span, expr }
+        let ty = expr.get_type();
+        Self { span, expr, ty }
     }
 }
 
@@ -539,6 +631,7 @@ pub struct CommIf {
     pub true_fst_comm: Box<ASTNode>,
     pub false_fst_comm: Box<ASTNode>,
     pub next: Box<ASTNode>,
+    pub ty: Type,
 }
 
 impl CommIf {
@@ -548,12 +641,14 @@ impl CommIf {
         true_fst_comm: Box<ASTNode>,
         false_fst_comm: Box<ASTNode>,
     ) -> Self {
+        let ty = expr.get_type();
         Self {
             span,
             expr,
             true_fst_comm,
             false_fst_comm,
             next: Box::new(ASTNode::None),
+            ty,
         }
     }
 
@@ -568,15 +663,18 @@ pub struct CommWhile {
     pub expr: Box<ASTNode>,
     pub fst_comm: Box<ASTNode>,
     pub next: Box<ASTNode>,
+    pub ty: Type,
 }
 
 impl CommWhile {
     pub fn new(span: Span, expr: Box<ASTNode>, fst_comm: Box<ASTNode>) -> Self {
+        let ty = expr.get_type();
         Self {
             span,
             expr,
             fst_comm,
             next: Box::new(ASTNode::None),
+            ty,
         }
     }
 
@@ -591,15 +689,18 @@ pub struct ArrIdx {
     pub ident: Box<ASTNode>,
     pub expr_tree: Box<ASTNode>,
     pub next: Box<ASTNode>,
+    pub ty: Type,
 }
 
 impl ArrIdx {
     pub fn new(span: Span, ident: Box<ASTNode>, expr_tree: Box<ASTNode>) -> Self {
+        let ty = ident.get_type();
         Self {
             span,
             ident,
             expr_tree,
             next: Box::new(ASTNode::None),
+            ty,
         }
     }
 
@@ -613,15 +714,23 @@ pub struct ExprIdxNode {
     pub span: Span,
     pub child_left: Box<ASTNode>,
     pub child_right: Box<ASTNode>,
+    pub ty: Type,
 }
 
 impl ExprIdxNode {
-    pub fn new(span: Span, child_left: Box<ASTNode>, child_right: Box<ASTNode>) -> Self {
-        Self {
+    pub fn new(
+        span: Span,
+        child_left: Box<ASTNode>,
+        child_right: Box<ASTNode>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        let ty = try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
+        Ok(Self {
             span,
             child_left,
             child_right,
-        }
+            ty,
+        })
     }
 }
 
@@ -631,16 +740,24 @@ pub struct BinOp {
     pub child_left: Box<ASTNode>,
     pub child_right: Box<ASTNode>,
     pub next: Box<ASTNode>,
+    ty: Type,
 }
 
 impl BinOp {
-    pub fn new(span: Span, child_left: Box<ASTNode>, child_right: Box<ASTNode>) -> Self {
-        Self {
+    pub fn new(
+        span: Span,
+        child_left: Box<ASTNode>,
+        child_right: Box<ASTNode>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        let ty = try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
+        Ok(Self {
             span,
             child_left,
             child_right,
             next: Box::new(ASTNode::None),
-        }
+            ty,
+        })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
@@ -653,14 +770,17 @@ pub struct UnOp {
     pub span: Span,
     pub child: Box<ASTNode>,
     pub next: Box<ASTNode>,
+    ty: Type,
 }
 
 impl UnOp {
     pub fn new(span: Span, child: Box<ASTNode>) -> Self {
+        let ty = child.get_type();
         Self {
             span,
             child,
             next: Box::new(ASTNode::None),
+            ty,
         }
     }
 
@@ -749,13 +869,24 @@ impl LitBool {
 pub struct Identifier {
     pub span: Span,
     pub next: Box<ASTNode>,
+    ty: Type,
 }
 
 impl Identifier {
-    pub fn new(span: Span) -> Self {
+    pub fn new(span: Span, lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
+        /*
+           Node might be created, but type might be unknown at this point as the identifier might appear in a list.
+            Therefore it might not be found in the symbol table yet.
+        */
+        let ty = match SCOPE_STACK.with(|stack| stack.borrow().get_symbol(span, lexer)) {
+            Ok(symbol) => symbol.get_type(),
+            Err(_) => Type::UNKNOWN,
+        };
+
         Self {
             span,
             next: Box::new(ASTNode::None),
+            ty,
         }
     }
 

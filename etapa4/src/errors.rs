@@ -39,6 +39,8 @@ pub enum ParsingError {
     SpanError(String),
     #[error("Add next to None node error: {0}")]
     AddNextToNone(String),
+    #[error("Coerse unkonwn type error: {0}")]
+    CoerseUnknown(String),
     #[error("No scope defined")]
     NoScope,
 }

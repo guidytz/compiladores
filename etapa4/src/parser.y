@@ -18,7 +18,10 @@ element_list -> Result<ASTNode, ParsingError>:
                         _ => unreachable!(),
                 }
         } |
-        global_declare element_list { $2 } |
+        global_declare element_list {
+                $1?; // propagate parsing errors
+                $2
+        } |
         function        { $1 } |
         global_declare  {
                 $1?; // propagate parsing errors
@@ -140,7 +143,8 @@ var_declare -> Result<ASTNode, ParsingError>:
                         let symbol = SymbolEntry::from_untyped_var(var, ty.clone());
                         SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(symbol))?;
                 }
-                Ok(aux.node)
+                let node = aux.node.update_type(ty, $lexer)?;
+                Ok(node)
         } ;
 
 var_list -> Result<LocalDeclrAux, ParsingError>:
@@ -180,14 +184,14 @@ attrib -> Result<ASTNode, ParsingError>:
         checked_ident '=' expr {
                 let ident = Box::new($1?);
                 let expr = Box::new($3?);
-                let node = CommAttrib::new($span, ident, expr);
+                let node = CommAttrib::new($span, ident, expr, $lexer)?;
                 Ok(ASTNode::CommAttrib(node))
         } |
         arr_ident '=' expr  {
                 let ident = Box::new($1?);
                 check_declaration(&ident, $lexer, UsageType::Arr)?;
                 let expr = Box::new($3?);
-                let node = CommAttrib::new($span, ident, expr);
+                let node = CommAttrib::new($span, ident, expr, $lexer)?;
                 Ok(ASTNode::CommAttrib(node))
         } ;
 
@@ -196,13 +200,13 @@ fun_call -> Result<ASTNode, ParsingError>:
                 let expr = Box::new($3?);
                 let ident = $1?;
                 check_declaration(&ident, $lexer, UsageType::FnCall)?;
-                let node = CommFnCall::new($span, expr, ident.span()?);
+                let node = CommFnCall::new($span, expr, Box::new(ident));
                 Ok(ASTNode::CommFnCall(node))
         } |
         ident '(' ')'  {
                 let ident = $1?;
                 check_declaration(&ident, $lexer, UsageType::FnCall)?;
-                let node = CommFnCall::new($span, Box::new(ASTNode::None), ident.span()?);
+                let node = CommFnCall::new($span, Box::new(ASTNode::None), Box::new(ident));
                 Ok(ASTNode::CommFnCall(node))
         } ;
 
@@ -247,7 +251,7 @@ exp_list -> Result<ASTNode, ParsingError>:
         exp_list '^' expr {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = ExprIdxNode::new($span, child_left, child_right);
+                let node = ExprIdxNode::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprIdxNode(node))
         } |
         expr { $1 } ;
@@ -259,7 +263,7 @@ or_op -> Result<ASTNode, ParsingError>:
         or_op "TK_OC_OR" and_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprOr(node))
         } |
         and_op  { $1 } ;
@@ -268,7 +272,7 @@ and_op -> Result<ASTNode, ParsingError>:
         and_op "TK_OC_AND" neq_eq_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprAnd(node))
         } |
         neq_eq_op  { $1 } ;
@@ -277,13 +281,13 @@ neq_eq_op -> Result<ASTNode, ParsingError>:
         neq_eq_op "TK_OC_EQ" desig_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprEq(node))
         } |
         neq_eq_op "TK_OC_NE" desig_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprNeq(node))
         } |
         desig_op  { $1 } ;
@@ -292,25 +296,25 @@ desig_op -> Result<ASTNode, ParsingError>:
         desig_op '<' sum_min_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprLt(node))
          } |
         desig_op '>' sum_min_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprGt(node))
          } |
         desig_op "TK_OC_LE" sum_min_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprLe(node))
          } |
         desig_op "TK_OC_GE" sum_min_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprGe(node))
          } |
         sum_min_op  { $1 } ;
@@ -319,13 +323,13 @@ sum_min_op -> Result<ASTNode, ParsingError>:
         sum_min_op '+' mul_div_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprAdd(node))
          } |
         sum_min_op '-' mul_div_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprSub(node))
          } |
         mul_div_op  { $1 } ;
@@ -334,19 +338,19 @@ mul_div_op -> Result<ASTNode, ParsingError>:
         mul_div_op '*' inv_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprMul(node))
         } |
         mul_div_op '/' inv_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprDiv(node))
         } |
         mul_div_op '%' inv_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right);
+                let node = BinOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprMod(node))
         } |
         inv_op  { $1 } ;
@@ -391,7 +395,7 @@ arr_ident -> Result<ASTNode, ParsingError>:
         } ;
 
 ident -> Result<ASTNode, ParsingError>:
-        "TK_IDENTIFICADOR" { Ok(ASTNode::Identifier(Identifier::new($span)))} ;
+        "TK_IDENTIFICADOR" { Ok(ASTNode::Identifier(Identifier::new($span, $lexer)))} ;
 
 literals -> Result<ASTNode, ParsingError>:
         "TK_LIT_INT" {
@@ -420,11 +424,11 @@ literals -> Result<ASTNode, ParsingError>:
                 Ok(ASTNode::LitBool(LitBool::new($span)))
         } ;
 
-type -> Result<SymbolType, ParsingError>:
-        "TK_PR_INT" { Ok(SymbolType::INT) } |
-        "TK_PR_FLOAT" { Ok(SymbolType::FLOAT) } |
-        "TK_PR_BOOL" { Ok(SymbolType::BOOL) } |
-        "TK_PR_CHAR"  { Ok(SymbolType::CHAR) } ;
+type -> Result<Type, ParsingError>:
+        "TK_PR_INT" { Ok(Type::INT) } |
+        "TK_PR_FLOAT" { Ok(Type::FLOAT) } |
+        "TK_PR_BOOL" { Ok(Type::BOOL) } |
+        "TK_PR_CHAR"  { Ok(Type::CHAR) } ;
 
 multidim -> Result<Vec<u32>, ParsingError>:
         lit_int_val '^' multidim {
@@ -479,7 +483,7 @@ use etapa4::{ast::{
                        UntypedVar,
                        UntypedArr,
                        UntypedGlobalDeclr,
-                       SymbolType,
+                       Type,
                        SymbolEntry,
                        SymbolFn,
                        CommonAttrs,
@@ -490,12 +494,5 @@ use etapa4::{ast::{
 macro_rules! empty_node {
         () => {
                 Ok(ASTNode::None)
-        }
-}
-
-#[cfg(feature = "debug")]
-macro_rules! print_stack {
-        () => {
-                SCOPE_STACK.with(|stack| println!("{:#?}", *stack.borrow()));
         }
 }

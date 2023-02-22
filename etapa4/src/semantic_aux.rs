@@ -30,6 +30,18 @@ impl SymbolEntry {
         }
     }
 
+    pub fn get_type(&self) -> Type {
+        match self {
+            SymbolEntry::Var(symbol) => symbol.ty.clone(),
+            SymbolEntry::Arr(symbol) => symbol.common.ty.clone(),
+            SymbolEntry::Fn(symbol) => symbol.common.ty.clone(),
+            SymbolEntry::LitInt(_) => Type::INT,
+            SymbolEntry::LitFloat(_) => Type::FLOAT,
+            SymbolEntry::LitChar(_) => Type::CHAR,
+            SymbolEntry::LitBool(_) => Type::BOOL,
+        }
+    }
+
     pub fn get_line_col(&self) -> (usize, usize) {
         match self {
             SymbolEntry::LitInt(content) => (content.line, content.col),
@@ -42,7 +54,7 @@ impl SymbolEntry {
         }
     }
 
-    pub fn from_untyped_var(var: UntypedVar, ty: SymbolType) -> Self {
+    pub fn from_untyped_var(var: UntypedVar, ty: Type) -> Self {
         SymbolEntry::Var(CommonAttrs {
             line: var.line,
             col: var.col,
@@ -52,7 +64,7 @@ impl SymbolEntry {
         })
     }
 
-    pub fn from_untyped_global_declr(var: UntypedGlobalDeclr, ty: SymbolType) -> Self {
+    pub fn from_untyped_global_declr(var: UntypedGlobalDeclr, ty: Type) -> Self {
         match var {
             UntypedGlobalDeclr::Var(var) => SymbolEntry::from_untyped_var(var, ty.clone()),
             UntypedGlobalDeclr::Arr(var) => SymbolEntry::Arr(SymbolArr {
@@ -84,28 +96,29 @@ impl SymbolEntry {
             Self::LitInt(SymbolLitInt {
                 line,
                 col,
-                size: SymbolType::INT.get_size(),
+                size: Type::INT.get_size(),
                 val: lit,
             })
         } else if let Ok(lit) = str.parse::<f64>() {
             Self::LitFloat(SymbolLitFloat {
                 line,
                 col,
-                size: SymbolType::FLOAT.get_size(),
+                size: Type::FLOAT.get_size(),
                 val: lit,
+                val_string: str.to_string(),
             })
         } else if let Ok(lit) = str.parse::<bool>() {
             Self::LitBool(SymbolLitBool {
                 line,
                 col,
-                size: SymbolType::BOOL.get_size(),
+                size: Type::BOOL.get_size(),
                 val: lit,
             })
         } else {
             Self::LitChar(SymbolLitChar {
                 line,
                 col,
-                size: SymbolType::CHAR.get_size(),
+                size: Type::CHAR.get_size(),
                 val: str.to_owned(),
             })
         }
@@ -126,6 +139,7 @@ pub struct SymbolLitFloat {
     pub col: usize,
     pub size: u32,
     pub val: f64,
+    pub val_string: String,
 }
 
 #[derive(Debug, Clone)]
@@ -150,13 +164,13 @@ pub struct CommonAttrs {
     pub col: usize,
     pub size: u32,
     pub val: String,
-    pub ty: SymbolType,
+    pub ty: Type,
 }
 
 impl CommonAttrs {
     pub fn new(
         name: String,
-        ty: SymbolType,
+        ty: Type,
         span: Span,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Self {
@@ -182,7 +196,7 @@ pub struct SymbolArr {
 impl SymbolArr {
     pub fn new(
         name: String,
-        ty: SymbolType,
+        ty: Type,
         span: Span,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
         dims: Vec<u32>,
@@ -201,30 +215,45 @@ pub struct SymbolFn {
 impl SymbolFn {
     pub fn new(
         name: String,
-        ty: SymbolType,
+        ty: Type,
         span: Span,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
         args: Option<Vec<SymbolEntry>>,
     ) -> Self {
-        let common = CommonAttrs::new(name, ty, span, lexer);
+        let mut common = CommonAttrs::new(name, ty, span, lexer);
+        common.size = 0;
         Self { common, args }
     }
 }
-#[derive(Debug, Clone)]
-pub enum SymbolType {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Type {
     CHAR,
     INT,
     FLOAT,
     BOOL,
+    UNKNOWN,
 }
 
-impl SymbolType {
+impl ToString for Type {
+    fn to_string(&self) -> String {
+        match self {
+            Type::CHAR => "char".to_owned(),
+            Type::INT => "int".to_owned(),
+            Type::FLOAT => "float".to_owned(),
+            Type::BOOL => "bool".to_owned(),
+            Type::UNKNOWN => "UNKNOWN".to_owned(),
+        }
+    }
+}
+
+impl Type {
     pub fn get_size(&self) -> u32 {
         match self {
-            SymbolType::CHAR => 1,
-            SymbolType::INT => 4,
-            SymbolType::FLOAT => 8,
-            SymbolType::BOOL => 1,
+            Type::CHAR => 1,
+            Type::INT => 4,
+            Type::FLOAT => 8,
+            Type::BOOL => 1,
+            Type::UNKNOWN => 0,
         }
     }
 }
@@ -300,7 +329,10 @@ impl ScopeStack {
 
     pub fn add_symbol(&mut self, symbol: SymbolEntry) -> Result<(), ParsingError> {
         #[cfg(feature = "debug")]
-        println!("Before adding: {self:#?}");
+        {
+            println!("Attempting to add symbol {symbol:#?}");
+            println!("Before adding: {self:#?}");
+        }
 
         let scope_table = self.0.last_mut().ok_or(ParsingError::NoScope)?;
         match &symbol {
@@ -309,7 +341,7 @@ impl ScopeStack {
                 scope_table.add_symbol(key, symbol)?;
             }
             SymbolEntry::LitFloat(content) => {
-                let key = content.val.to_string();
+                let key = content.val_string.clone();
                 scope_table.add_symbol(key, symbol)?;
             }
             SymbolEntry::LitChar(content) => {
@@ -322,6 +354,14 @@ impl ScopeStack {
             }
             SymbolEntry::Var(content) => scope_table.add_symbol(content.val.clone(), symbol)?,
             SymbolEntry::Arr(content) => {
+                if content.common.ty == Type::CHAR {
+                    println!("Caught the error");
+                    return Err(ParsingError::ErrCharVector(format!(
+                        "Attempting to declare a char array at line {}, col {}.",
+                        content.common.line, content.common.col
+                    )));
+                }
+
                 scope_table.add_symbol(content.common.val.clone(), symbol)?
             }
             SymbolEntry::Fn(content) => {
@@ -449,13 +489,82 @@ impl ToString for UsageType {
     }
 }
 
+pub fn try_coersion(
+    type_1: Type,
+    type_2: Type,
+    span: Span,
+    lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+) -> Result<Type, ParsingError> {
+    let ((line, col), _) = lexer.line_col(span);
+    #[cfg(feature = "debug")]
+    println!(
+        "Coersion try at line {}, col {} ===> type 1: {}. type 2: {}",
+        line,
+        col,
+        type_1.to_string(),
+        type_2.to_string()
+    );
+
+    if type_1 == type_2 {
+        return Ok(type_1);
+    }
+
+    match type_1 {
+        Type::CHAR => Err(ParsingError::ErrXToChar(format!(
+            "Attempting to coerse type {} to char at line {}, col {}.",
+            type_2.to_string(),
+            line,
+            col
+        ))),
+        Type::INT => match type_2 {
+            Type::CHAR => Err(ParsingError::ErrCharToInt(format!(
+                "Attempting to coerse type char to int at line {}, col {}.",
+                line, col
+            ))),
+            Type::FLOAT => Ok(type_2),
+            Type::BOOL => Ok(type_1),
+            Type::UNKNOWN => Err(ParsingError::CoerseUnknown(
+                "this should not happen!".to_string(),
+            )),
+            Type::INT => unreachable!(),
+        },
+        Type::FLOAT => match type_2 {
+            Type::CHAR => Err(ParsingError::ErrCharToFloat(format!(
+                "Attempting to coerse type char to float at line {}, col {}.",
+                line, col
+            ))),
+            Type::INT => Ok(type_1),
+            Type::BOOL => Ok(type_1),
+            Type::UNKNOWN => Err(ParsingError::CoerseUnknown(
+                "this should not happen!".to_string(),
+            )),
+            Type::FLOAT => unreachable!(),
+        },
+        Type::BOOL => match type_2 {
+            Type::CHAR => Err(ParsingError::ErrCharToBool(format!(
+                "Attempting to coerse type char to bool at line {}, col {}.",
+                line, col
+            ))),
+            Type::INT => Ok(type_2),
+            Type::FLOAT => Ok(type_2),
+            Type::UNKNOWN => Err(ParsingError::CoerseUnknown(
+                "this should not happen!".to_string(),
+            )),
+            Type::BOOL => unreachable!(),
+        },
+        Type::UNKNOWN => Err(ParsingError::CoerseUnknown(
+            "this should not happen!".to_string(),
+        )),
+    }
+}
+
 pub fn check_declaration(
     ident: &ASTNode,
     lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     usage: UsageType,
-) -> Result<(), ParsingError> {
+) -> Result<SymbolEntry, ParsingError> {
     let symbol = SCOPE_STACK.with(|stack| stack.borrow().get_symbol(ident.span()?, lexer))?;
-    match symbol {
+    match symbol.clone() {
         SymbolEntry::Var(content) if usage != UsageType::Var => {
             let declr_line = content.line;
             let declr_col = content.col;
@@ -501,6 +610,6 @@ pub fn check_declaration(
                 declr_col
             )))
         }
-        _ => Ok(()),
+        _ => Ok(symbol),
     }
 }

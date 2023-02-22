@@ -40,7 +40,9 @@ fn main() -> ExitCode {
 
         let lexerdef = scanner_l::lexerdef();
         let lexer = lexerdef.lexer(&input);
+
         SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope());
+
         let (tree, errors) = parser_y::parse(&lexer);
         if !errors.is_empty() {
             for err in errors {
@@ -55,7 +57,10 @@ fn main() -> ExitCode {
                 #[cfg(feature = "debug-tree")]
                 println!("{:#?}", tree);
 
-                tree.print(&lexer);
+                let str = tree.to_string(&lexer);
+                if !str.is_empty() {
+                    print!("{str}");
+                }
                 return ExitCode::SUCCESS;
             }
             Err(err) => {
