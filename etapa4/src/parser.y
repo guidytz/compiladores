@@ -34,7 +34,7 @@ global_declare -> Result<(), ParsingError>:
                 let ty = $1?;
                 for var in $2? {
                         let symbol = SymbolEntry::from_untyped_global_declr(var, ty.clone());
-                        SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(symbol))?;
+                        add_symbol_to_curr_st(symbol)?;
                 }
                 Ok(())
         } ;
@@ -75,7 +75,7 @@ function -> Result<ASTNode, ParsingError>:
                 let name = $lexer.span_str(ident.span()?).to_string();
                 let args = $3?;
                 let entry = SymbolEntry::Fn(SymbolFn::new(name, ty, $span, $lexer, args));
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(entry))?;
+                add_symbol_to_curr_st(entry)?;
                 let comm = Box::new($4?);
                 let node = FnDeclare::new($span, comm, ident.span()?);
                 Ok(ASTNode::FnDeclare(node))
@@ -91,7 +91,7 @@ param_list -> Result<Vec<SymbolEntry>, ParsingError>:
         type ident ',' param_list {
                 let name = $lexer.span_str($2?.span()?).to_string();
                 let var = SymbolEntry::Var(CommonAttrs::new(name, $1?, $span, $lexer));
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(var.clone()))?;
+                add_symbol_to_curr_st(var.clone())?;
 
                 let mut list = vec![var];
                 list.extend($4?);
@@ -100,7 +100,7 @@ param_list -> Result<Vec<SymbolEntry>, ParsingError>:
         type ident  {
                 let name = $lexer.span_str($2?.span()?).to_string();
                 let var = SymbolEntry::Var(CommonAttrs::new(name, $1?, $span, $lexer));
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(var.clone()))?;
+                add_symbol_to_curr_st(var.clone())?;
 
                 Ok(vec![var])
         } ;
@@ -141,7 +141,7 @@ var_declare -> Result<ASTNode, ParsingError>:
                 let ty = $1?;
                 for var in aux.vars {
                         let symbol = SymbolEntry::from_untyped_var(var, ty.clone());
-                        SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(symbol))?;
+                        add_symbol_to_curr_st(symbol)?;
                 }
                 let node = aux.node.update_type(ty, $lexer)?;
                 Ok(node)
@@ -400,27 +400,27 @@ ident -> Result<ASTNode, ParsingError>:
 literals -> Result<ASTNode, ParsingError>:
         "TK_LIT_INT" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                add_symbol_to_curr_st(lit_entry)?;
                 Ok(ASTNode::LitInt(LitInt::new($span)))
         } |
         "TK_LIT_FLOAT" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                add_symbol_to_curr_st(lit_entry)?;
                 Ok(ASTNode::LitFloat(LitFloat::new($span)))
         } |
         "TK_LIT_CHAR" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                add_symbol_to_curr_st(lit_entry)?;
                 Ok(ASTNode::LitChar(LitChar::new($span)))
         } |
         "TK_LIT_TRUE" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                add_symbol_to_curr_st(lit_entry)?;
                 Ok(ASTNode::LitBool(LitBool::new($span)))
         } |
         "TK_LIT_FALSE" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                add_symbol_to_curr_st(lit_entry)?;
                 Ok(ASTNode::LitBool(LitBool::new($span)))
         } ;
 
@@ -441,19 +441,19 @@ multidim -> Result<Vec<u32>, ParsingError>:
 lit_int_val -> Result<u32, ParsingError>:
         "TK_LIT_INT" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
-                SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(lit_entry))?;
+                add_symbol_to_curr_st(lit_entry)?;
                 int_from_span($span, $lexer)
         } ;
 
 begin_scope -> Result<(), ParsingError>:
         %empty {
-                SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope());
+                new_scope();
                 Ok(())
         };
 
 end_scope -> Result<(), ParsingError>:
         %empty {
-                SCOPE_STACK.with(|stack| stack.borrow_mut().pop_scope());
+                end_scope();
                 Ok(())
         };
 
@@ -478,7 +478,9 @@ use etapa4::{ast::{
         LitBool,
         Identifier},
         errors::ParsingError,
-        SCOPE_STACK,
+        add_symbol_to_curr_st,
+        new_scope,
+        end_scope,
         semantic_aux::{int_from_span,
                        UntypedVar,
                        UntypedArr,

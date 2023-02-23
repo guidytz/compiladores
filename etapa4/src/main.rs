@@ -9,7 +9,7 @@ use std::process::ExitCode;
 use std::io::{self, Write};
 
 #[cfg(feature = "lexparser")]
-use etapa4::SCOPE_STACK;
+use etapa4::new_scope;
 
 use lrlex::lrlex_mod;
 #[cfg(feature = "lexparser")]
@@ -41,7 +41,7 @@ fn main() -> ExitCode {
         let lexerdef = scanner_l::lexerdef();
         let lexer = lexerdef.lexer(&input);
 
-        SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope());
+        new_scope();
 
         let (tree, errors) = parser_y::parse(&lexer);
         if !errors.is_empty() {

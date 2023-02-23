@@ -4,8 +4,8 @@ use lrpar::NonStreamingLexer;
 
 use crate::{
     errors::ParsingError,
+    get_symbol,
     semantic_aux::{try_coersion, Type},
-    SCOPE_STACK,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -878,7 +878,7 @@ impl Identifier {
            Node might be created, but type might be unknown at this point as the identifier might appear in a list.
             Therefore it might not be found in the symbol table yet.
         */
-        let ty = match SCOPE_STACK.with(|stack| stack.borrow().get_symbol(span, lexer)) {
+        let ty = match get_symbol(span, lexer) {
             Ok(symbol) => symbol.get_type(),
             Err(_) => Type::UNKNOWN,
         };

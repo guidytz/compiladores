@@ -2,7 +2,6 @@
 mod test {
     use std::collections::{HashMap, HashSet};
 
-    use etapa4::SCOPE_STACK;
     use lrlex::lrlex_mod;
     use lrpar::lrpar_mod;
 
@@ -29,12 +28,10 @@ mod test {
                     let output_file_path =
                         format!("../test_data/etapa3/outputs/{input_file_name}.ref.dot");
 
-                    println!("{input_file_name}");
+                    // println!("{input_file_name}");
 
                     let expected_result = std::fs::read_to_string(output_file_path)
                         .expect("Couldn't read expected output file");
-
-                    SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope());
 
                     let lexerdef = scanner_l::lexerdef();
                     let lexer = lexerdef.lexer(&input);
@@ -131,7 +128,7 @@ mod test {
         let (out_labels, out_tree) = parse(tree_output);
         let exp_root = find_root(&exp_tree);
         let out_root = find_root(&out_tree);
-        println!("{exp_root:#?}, {out_root:#?}");
+        // println!("{exp_root:#?}, {out_root:#?}");
         let mut exp_not_visited = match exp_root {
             Some(root) => vec![root],
             None => vec![],
@@ -150,9 +147,9 @@ mod test {
                     let out_label = out_labels.get(&curr_out);
                     match (exp_label, out_label) {
                         (Some(exp_label), Some(out_label)) => {
-                            println!(
-                                "exp -> {curr_exp}, {exp_label}. out -> {curr_out}, {out_label}"
-                            );
+                            // println!(
+                            //     "exp -> {curr_exp}, {exp_label}. out -> {curr_out}, {out_label}"
+                            // );
                             if exp_label != out_label {
                                 return false;
                             }

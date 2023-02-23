@@ -4,7 +4,7 @@ use cfgrammar::Span;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
 
-use crate::{ast::ASTNode, errors::ParsingError, SCOPE_STACK};
+use crate::{ast::ASTNode, errors::ParsingError, get_symbol};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -15,6 +15,7 @@ pub enum SymbolEntry {
     Var(CommonAttrs),
     Arr(SymbolArr),
     Fn(SymbolFn),
+    None,
 }
 
 impl SymbolEntry {
@@ -27,6 +28,7 @@ impl SymbolEntry {
             SymbolEntry::Var(_) => "variable",
             SymbolEntry::Arr(_) => "array",
             SymbolEntry::Fn(_) => "function",
+            SymbolEntry::None => "NONE",
         }
     }
 
@@ -39,6 +41,7 @@ impl SymbolEntry {
             SymbolEntry::LitFloat(_) => Type::FLOAT,
             SymbolEntry::LitChar(_) => Type::CHAR,
             SymbolEntry::LitBool(_) => Type::BOOL,
+            SymbolEntry::None => Type::UNKNOWN,
         }
     }
 
@@ -51,6 +54,7 @@ impl SymbolEntry {
             SymbolEntry::Var(content) => (content.line, content.col),
             SymbolEntry::Arr(content) => (content.common.line, content.common.col),
             SymbolEntry::Fn(content) => (content.common.line, content.common.col),
+            SymbolEntry::None => (0, 0),
         }
     }
 
@@ -367,6 +371,7 @@ impl ScopeStack {
             SymbolEntry::Fn(content) => {
                 scope_table.add_symbol(content.common.val.clone(), symbol)?
             }
+            SymbolEntry::None => return Ok(()),
         }
 
         #[cfg(feature = "debug")]
@@ -563,7 +568,7 @@ pub fn check_declaration(
     lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     usage: UsageType,
 ) -> Result<SymbolEntry, ParsingError> {
-    let symbol = SCOPE_STACK.with(|stack| stack.borrow().get_symbol(ident.span()?, lexer))?;
+    let symbol = get_symbol(ident.span()?, lexer)?;
     match symbol.clone() {
         SymbolEntry::Var(content) if usage != UsageType::Var => {
             let declr_line = content.line;
