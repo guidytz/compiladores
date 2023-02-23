@@ -18,6 +18,7 @@ clean:
 test:
 	cargo test --features onlylex --no-default-features --test test-etapa1 -- --nocapture
 	cargo test --features lexparser --test test-etapa2 -- --nocapture
+	cargo test --features lexparser --test test-etapa3 -- --nocapture
 
 zip:
 	tar cvzf etapa4.tgz Makefile Cargo.toml build.rs src/ tests/

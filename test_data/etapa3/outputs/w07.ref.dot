@@ -2,9 +2,9 @@ digraph {
 label="Ref";
 fg -> ff
 ff -> callg
-callg -> priarg;
-priarg -> secarg;
-secarg -> triarg;
+callg -> priarg
+priarg -> secarg
+secarg -> triarg
 fg [label="g"];
 ff [label="f"];
 callg [label="call g"];

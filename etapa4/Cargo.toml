@@ -27,12 +27,18 @@ lexparser = []
 debug = []
 debug-tree = []
 
+
+[[test]]
+name = "test-etapa1"
+path = "tests/test_etapa1.rs"
+required-features = ["onlylex"]
+
 [[test]]
 name = "test-etapa2"
 path = "tests/test_etapa2.rs"
 required-features = ["lexparser"]
 
 [[test]]
-name = "test-etapa1"
-path = "tests/test_etapa1.rs"
-required-features = ["onlylex"]
+name = "test-etapa3"
+path = "tests/test_etapa3.rs"
+required-features = ["lexparser"]
