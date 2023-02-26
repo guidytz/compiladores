@@ -1,0 +1,9 @@
+char a;
+
+int intfun() {
+    return 1;
+}
+
+int fn() {
+    a = intfun();
+}
