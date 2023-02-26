@@ -379,6 +379,10 @@ impl ScopeStack {
 
         Ok(())
     }
+
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
 }
 
 #[derive(Debug)]
@@ -590,7 +594,7 @@ pub fn check_declaration(
             let declr_col = content.common.col;
             let ((usage_line, usage_col), _) = lexer.line_col(ident.span()?);
 
-            Err(ParsingError::ErrVariable(format!(
+            Err(ParsingError::ErrArray(format!(
                 "Atempting to use indent \"{}\" as {} at line {}, col {}. This identifier was declared as array at line {}, col {}.",
                 content.common.val,
                 usage.to_string(),
@@ -605,7 +609,7 @@ pub fn check_declaration(
             let declr_col = content.common.col;
             let ((usage_line, usage_col), _) = lexer.line_col(ident.span()?);
 
-            Err(ParsingError::ErrVariable(format!(
+            Err(ParsingError::ErrFunction(format!(
                 "Atempting to use indent \"{}\" as {} at line {}, col {}. This identifier was declared as function at line {}, col {}.",
                 content.common.val,
                 usage.to_string(),

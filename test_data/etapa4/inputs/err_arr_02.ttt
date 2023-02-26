@@ -1,0 +1,6 @@
+float a[2^2];
+
+int fun() {
+    float b;
+    b = 2.1 * a();
+}

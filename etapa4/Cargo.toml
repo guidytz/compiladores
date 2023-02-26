@@ -43,3 +43,8 @@ required-features = ["lexparser"]
 name = "test-etapa3"
 path = "tests/test_etapa3.rs"
 required-features = ["lexparser"]
+
+[[test]]
+name = "test-etapa4"
+path = "tests/test_etapa4.rs"
+required-features = ["lexparser", "semantics"]

@@ -1,0 +1,6 @@
+char a;
+
+int fn() {
+    int b;
+    a = b;
+}

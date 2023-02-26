@@ -1,0 +1,5 @@
+int func() {
+    char a;
+    bool b;
+    b = false == a;
+}

@@ -38,3 +38,8 @@ pub fn get_symbol(
     #[cfg(not(feature = "semantics"))]
     Ok(SymbolEntry::None)
 }
+
+pub fn clear_stack() {
+    #[cfg(feature = "semantics")]
+    SCOPE_STACK.with(|stack| stack.borrow_mut().clear());
+}

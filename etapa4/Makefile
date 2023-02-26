@@ -15,10 +15,11 @@ clean:
 	rm -f etapa4 Cargo.lock
 	rm -rf target
 
-test:
+test: # only works with test data dir
 	cargo test --features onlylex 	--no-default-features --test test-etapa1 -- --nocapture
 	cargo test --features lexparser --no-default-features --test test-etapa2 -- --nocapture
 	cargo test --features lexparser --no-default-features --test test-etapa3 -- --nocapture
+	cargo test --features lexparser --features semantics  --test test-etapa4 -- --nocapture
 
 zip:
 	tar cvzf etapa4.tgz Makefile Cargo.toml build.rs src/ tests/

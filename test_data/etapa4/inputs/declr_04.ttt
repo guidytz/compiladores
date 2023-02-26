@@ -1,0 +1,4 @@
+float func() {
+    float a, b, c;
+    bool a <= false;
+}

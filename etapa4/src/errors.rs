@@ -47,6 +47,8 @@ pub enum ParsingError {
 
 impl ParsingError {
     pub fn to_err_code(&self) -> u8 {
+        #[cfg(feature = "debug")]
+        println!("{self:#?}");
         match self {
             ParsingError::ErrUndeclared(_) => 10,
             ParsingError::ErrDeclared(_) => 11,

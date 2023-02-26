@@ -1,0 +1,6 @@
+int a;
+
+int fn () {
+    int b <= 3;
+    a = 2 * 3 + b;
+}

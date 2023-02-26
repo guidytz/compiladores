@@ -1,0 +1,7 @@
+int a, b, c;
+
+float fn() {
+    c = 3;
+}
+
+float a;
