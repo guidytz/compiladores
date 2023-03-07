@@ -118,7 +118,7 @@ mod test {
             return 0;
         }
 
-        let code = match &first[2..] {
+        match &first[2..] {
             "ERR_UNDECLARED" => 10,
             "ERR_DECLARED" => 11,
             "ERR_VARIABLE" => 20,
@@ -130,8 +130,6 @@ mod test {
             "ERR_CHAR_VECTOR" => 34,
             "ERR_X_TO_CHAR" => 35,
             _ => 100,
-        };
-
-        code
+        }
     }
 }
