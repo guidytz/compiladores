@@ -1,0 +1,6 @@
+//ERR_X_TO_CHAR
+int f(){
+    char c;
+    int a;
+    c = a;
+}

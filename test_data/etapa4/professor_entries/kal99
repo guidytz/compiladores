@@ -1,0 +1,8 @@
+//ERR_CHAR_TO_INT
+int f() {
+    char a <= '2';
+    int b;
+    int c;
+    c = b + a;
+    return 0;
+}
