@@ -359,7 +359,6 @@ impl ScopeStack {
             SymbolEntry::Var(content) => scope_table.add_symbol(content.val.clone(), symbol)?,
             SymbolEntry::Arr(content) => {
                 if content.common.ty == Type::CHAR {
-                    println!("Caught the error");
                     return Err(ParsingError::ErrCharVector(format!(
                         "Attempting to declare a char array at line {}, col {}.",
                         content.common.line, content.common.col
