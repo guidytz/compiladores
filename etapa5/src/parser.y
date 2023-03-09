@@ -189,7 +189,6 @@ attrib -> Result<ASTNode, ParsingError>:
         } |
         arr_ident '=' expr  {
                 let ident = Box::new($1?);
-                check_declaration(&ident, $lexer, UsageType::Arr)?;
                 let expr = Box::new($3?);
                 let node = CommAttrib::new($span, ident, expr, $lexer)?;
                 Ok(ASTNode::CommAttrib(node))
