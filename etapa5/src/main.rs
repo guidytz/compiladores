@@ -57,10 +57,10 @@ fn main() -> ExitCode {
                 #[cfg(feature = "debug-tree")]
                 println!("{:#?}", tree);
 
-                let str = tree.to_string(&lexer);
-                if !str.is_empty() {
-                    print!("{str}");
+                for op in tree.code() {
+                    op.print();
                 }
+
                 return ExitCode::SUCCESS;
             }
             Err(err) => {

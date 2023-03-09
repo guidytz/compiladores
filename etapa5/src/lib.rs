@@ -8,6 +8,7 @@ use semantic_aux::{ScopeStack, SymbolEntry};
 
 pub mod ast;
 pub mod errors;
+pub mod iloc_aux;
 pub mod semantic_aux;
 
 thread_local!(pub static SCOPE_STACK: RefCell<ScopeStack> = RefCell::new(ScopeStack::new()));

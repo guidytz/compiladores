@@ -65,6 +65,7 @@ impl SymbolEntry {
             size: ty.get_size(),
             val: var.name,
             ty,
+            desloc: 0,
         })
     }
 
@@ -78,6 +79,7 @@ impl SymbolEntry {
                     size: var.dims.iter().fold(ty.get_size(), |acc, val| acc * val),
                     val: var.name,
                     ty,
+                    desloc: 0,
                 },
                 dims: var.dims,
             }),
@@ -127,6 +129,43 @@ impl SymbolEntry {
             })
         }
     }
+
+    pub fn desloc(&self) -> u32 {
+        match self {
+            SymbolEntry::LitInt(_) => todo!(),
+            SymbolEntry::LitFloat(_) => todo!(),
+            SymbolEntry::LitChar(_) => todo!(),
+            SymbolEntry::LitBool(_) => todo!(),
+            SymbolEntry::Var(var) => var.desloc,
+            SymbolEntry::Arr(_) => todo!(),
+            SymbolEntry::Fn(_) => todo!(),
+            SymbolEntry::None => todo!(),
+        }
+    }
+
+    pub fn add_desloc(&mut self, desloc: u32) -> bool {
+        match self {
+            SymbolEntry::Var(var) => {
+                var.desloc = desloc;
+                true
+            }
+            SymbolEntry::Arr(_arr) => false,
+            _ => false,
+        }
+    }
+
+    pub fn get_key(&self) -> String {
+        match self {
+            SymbolEntry::LitInt(content) => content.val.to_string(),
+            SymbolEntry::LitFloat(content) => content.val_string.clone(),
+            SymbolEntry::LitChar(content) => content.val.to_string(),
+            SymbolEntry::LitBool(content) => content.val.to_string(),
+            SymbolEntry::Var(content) => content.val.to_string(),
+            SymbolEntry::Arr(content) => content.common.val.to_string(),
+            SymbolEntry::Fn(content) => content.common.val.to_string(),
+            SymbolEntry::None => "".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -169,6 +208,7 @@ pub struct CommonAttrs {
     pub size: u32,
     pub val: String,
     pub ty: Type,
+    pub desloc: u32,
 }
 
 impl CommonAttrs {
@@ -187,6 +227,7 @@ impl CommonAttrs {
             size,
             val,
             ty,
+            desloc: 0,
         }
     }
 }
@@ -263,16 +304,21 @@ impl Type {
 }
 
 #[derive(Debug)]
-#[repr(transparent)]
-pub struct SymbolTable(pub HashMap<String, SymbolEntry>);
+pub struct SymbolTable {
+    pub desloc: u32,
+    pub table: HashMap<String, SymbolEntry>,
+}
 
 impl SymbolTable {
     pub fn new() -> Self {
-        Self(HashMap::default())
+        Self {
+            desloc: 0,
+            table: HashMap::default(),
+        }
     }
 
-    pub fn add_symbol(&mut self, key: String, symbol: SymbolEntry) -> Result<(), ParsingError> {
-        if let Some(declared) = self.0.get(&key) {
+    pub fn add_symbol(&mut self, key: String, mut symbol: SymbolEntry) -> Result<(), ParsingError> {
+        if let Some(declared) = self.table.get(&key) {
             if declared.is_literal() {
                 return Ok(());
             }
@@ -285,13 +331,17 @@ impl SymbolTable {
             )));
         }
 
-        self.0.insert(key, symbol);
+        if symbol.add_desloc(self.desloc) {
+            self.desloc += symbol.get_type().get_size();
+        }
+
+        self.table.insert(key, symbol);
 
         Ok(())
     }
 
     pub fn get(&self, key: &String) -> Option<&SymbolEntry> {
-        self.0.get(key)
+        self.table.get(key)
     }
 }
 
@@ -381,6 +431,10 @@ impl ScopeStack {
 
     pub fn clear(&mut self) {
         self.0.clear();
+    }
+
+    pub fn is_global(&self, symbol: &SymbolEntry) -> bool {
+        false
     }
 }
 

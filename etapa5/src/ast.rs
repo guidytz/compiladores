@@ -4,7 +4,8 @@ use lrpar::NonStreamingLexer;
 
 use crate::{
     errors::ParsingError,
-    get_symbol,
+    get_new_temp, get_symbol,
+    iloc_aux::{FullOp, IlocInst},
     semantic_aux::{try_coersion, Type},
 };
 
@@ -471,6 +472,148 @@ impl ASTNode {
             _ => Ok(self), // other nodes don't update types
         }
     }
+
+    pub fn code(&self) -> Vec<IlocInst> {
+        match self {
+            ASTNode::FnDeclare(node) => node.code.clone(),
+            ASTNode::VarInit(node) => node.code.clone(),
+            ASTNode::CommAttrib(node) => node.code.clone(),
+            ASTNode::CommFnCall(node) => node.code.clone(),
+            ASTNode::CommReturn(node) => node.code.clone(),
+            ASTNode::CommIf(node) => node.code.clone(),
+            ASTNode::CommWhile(node) => node.code.clone(),
+            ASTNode::ArrIdx(node) => node.code.clone(),
+            ASTNode::ExprIdxNode(node) => node.code.clone(),
+            ASTNode::ExprEq(node) => node.code.clone(),
+            ASTNode::ExprNeq(node) => node.code.clone(),
+            ASTNode::ExprLt(node) => node.code.clone(),
+            ASTNode::ExprGt(node) => node.code.clone(),
+            ASTNode::ExprLe(node) => node.code.clone(),
+            ASTNode::ExprGe(node) => node.code.clone(),
+            ASTNode::ExprOr(node) => {
+                let mut code = node.code.clone();
+                let mut inst = code.pop();
+                inst = match inst {
+                    Some(mut inst) => {
+                        inst.add_arithm_inst("or".to_string());
+                        Some(inst)
+                    }
+                    None => unreachable!("There should be code in code list"),
+                };
+                code.push(inst.unwrap());
+                code
+            }
+            ASTNode::ExprAnd(node) => {
+                let mut code = node.code.clone();
+                let mut inst = code.pop();
+                inst = match inst {
+                    Some(mut inst) => {
+                        inst.add_arithm_inst("and".to_string());
+                        Some(inst)
+                    }
+                    None => unreachable!("There should be code in code list"),
+                };
+                code.push(inst.unwrap());
+                code
+            }
+            ASTNode::ExprAdd(node) => {
+                let mut code = node.code.clone();
+                let mut inst = code.pop();
+                inst = match inst {
+                    Some(mut inst) => {
+                        inst.add_arithm_inst("add".to_string());
+                        Some(inst)
+                    }
+                    None => unreachable!("There should be code in code list"),
+                };
+                code.push(inst.unwrap());
+                code
+            }
+            ASTNode::ExprSub(node) => {
+                let mut code = node.code.clone();
+                let mut inst = code.pop();
+                inst = match inst {
+                    Some(mut inst) => {
+                        inst.add_arithm_inst("sub".to_string());
+                        Some(inst)
+                    }
+                    None => unreachable!("There should be code in code list"),
+                };
+                code.push(inst.unwrap());
+                code
+            }
+            ASTNode::ExprMul(node) => {
+                let mut code = node.code.clone();
+                let mut inst = code.pop();
+                inst = match inst {
+                    Some(mut inst) => {
+                        inst.add_arithm_inst("mul".to_string());
+                        Some(inst)
+                    }
+                    None => unreachable!("There should be code in code list"),
+                };
+                code.push(inst.unwrap());
+                code
+            }
+            ASTNode::ExprDiv(node) => {
+                let mut code = node.code.clone();
+                let mut inst = code.pop();
+                inst = match inst {
+                    Some(mut inst) => {
+                        inst.add_arithm_inst("div".to_string());
+                        Some(inst)
+                    }
+                    None => unreachable!("There should be code in code list"),
+                };
+                code.push(inst.unwrap());
+                code
+            }
+            ASTNode::ExprMod(node) => node.code.clone(),
+            ASTNode::ExprNeg(node) => node.code.clone(),
+            ASTNode::ExprInv(node) => node.code.clone(),
+            ASTNode::LitInt(node) => node.code.clone(),
+            ASTNode::LitFloat(node) => node.code.clone(),
+            ASTNode::LitChar(node) => node.code.clone(),
+            ASTNode::LitBool(node) => node.code.clone(),
+            ASTNode::Identifier(node) => node.code.clone(),
+            ASTNode::None => vec![IlocInst::Empty],
+        }
+    }
+
+    pub fn temp(&self) -> String {
+        match self {
+            ASTNode::FnDeclare(_) => todo!(),
+            ASTNode::VarInit(_) => todo!(),
+            ASTNode::CommAttrib(_) => todo!(),
+            ASTNode::CommFnCall(_) => todo!(),
+            ASTNode::CommReturn(_) => todo!(),
+            ASTNode::CommIf(_) => todo!(),
+            ASTNode::CommWhile(_) => todo!(),
+            ASTNode::ArrIdx(_) => todo!(),
+            ASTNode::ExprIdxNode(_) => todo!(),
+            ASTNode::ExprOr(node) => node.temp.clone(),
+            ASTNode::ExprAnd(node) => node.temp.clone(),
+            ASTNode::ExprEq(node) => node.temp.clone(),
+            ASTNode::ExprNeq(node) => node.temp.clone(),
+            ASTNode::ExprLt(node) => node.temp.clone(),
+            ASTNode::ExprGt(node) => node.temp.clone(),
+            ASTNode::ExprLe(node) => node.temp.clone(),
+            ASTNode::ExprGe(node) => node.temp.clone(),
+            ASTNode::ExprAdd(node) => node.temp.clone(),
+            ASTNode::ExprSub(node) => node.temp.clone(),
+            ASTNode::ExprMul(node) => node.temp.clone(),
+            ASTNode::ExprDiv(node) => node.temp.clone(),
+            ASTNode::ExprMod(_) => todo!(),
+            ASTNode::ExprNeg(_) => todo!(),
+            ASTNode::ExprInv(_) => todo!(),
+            ASTNode::LitInt(_) => todo!(),
+            ASTNode::LitFloat(_) => todo!(),
+            ASTNode::LitChar(_) => todo!(),
+            ASTNode::LitBool(_) => todo!(),
+            ASTNode::Identifier(node) => node.temp.clone(),
+            ASTNode::None => todo!(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -479,15 +622,19 @@ pub struct FnDeclare {
     pub comm: Box<ASTNode>,
     pub next_fn: Box<ASTNode>,
     pub name: Span,
+    pub code: Vec<IlocInst>,
 }
 
 impl FnDeclare {
     pub fn new(span: Span, comm: Box<ASTNode>, name: Span) -> Self {
+        let mut code = vec![];
+        code.extend(comm.code());
         Self {
             span,
             comm,
             next_fn: Box::new(ASTNode::None),
             name,
+            code,
         }
     }
 
@@ -503,6 +650,7 @@ pub struct VarInit {
     pub lit: Box<ASTNode>,
     pub next: Option<Box<ASTNode>>,
     pub ty: Type,
+    pub code: Vec<IlocInst>,
 }
 
 impl VarInit {
@@ -520,6 +668,7 @@ impl VarInit {
             lit,
             next,
             ty,
+            code: vec![],
         }
     }
 
@@ -527,12 +676,13 @@ impl VarInit {
         match &self.next {
             Some(node) => {
                 self.next = match **node {
-                    ASTNode::None => Some(next),
-                    _ => Some(Box::new(node.clone().add_next(next)?)),
+                    ASTNode::None => Some(next.clone()),
+                    _ => Some(Box::new(node.clone().add_next(next.clone())?)),
                 }
             }
-            None => self.next = Some(next),
+            None => self.next = Some(next.clone()),
         }
+        self.code.extend(next.code());
         Ok(())
     }
 
@@ -559,6 +709,7 @@ pub struct CommAttrib {
     pub expr: Box<ASTNode>,
     pub next: Box<ASTNode>,
     ty: Type,
+    pub code: Vec<IlocInst>,
 }
 
 impl CommAttrib {
@@ -570,17 +721,21 @@ impl CommAttrib {
     ) -> Result<Self, ParsingError> {
         try_coersion(ident.get_type(), expr.get_type(), span, lexer)?;
         let ty = ident.get_type();
+        let mut code = vec![];
+        code.extend(expr.code());
         Ok(Self {
             span,
             ident,
             expr,
             next: Box::new(ASTNode::None),
             ty,
+            code,
         })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -591,22 +746,27 @@ pub struct CommFnCall {
     pub next: Box<ASTNode>,
     pub name: Box<ASTNode>,
     pub ty: Type,
+    pub code: Vec<IlocInst>,
 }
 
 impl CommFnCall {
     pub fn new(span: Span, expr: Box<ASTNode>, ident: Box<ASTNode>) -> Self {
         let ty = ident.get_type();
+        let mut code = vec![];
+        code.extend(expr.code());
         Self {
             span,
             expr,
             name: ident,
             next: Box::new(ASTNode::None),
             ty,
+            code,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -615,12 +775,20 @@ pub struct CommReturn {
     pub span: Span,
     pub expr: Box<ASTNode>,
     ty: Type,
+    pub code: Vec<IlocInst>,
 }
 
 impl CommReturn {
     pub fn new(span: Span, expr: Box<ASTNode>) -> Self {
         let ty = expr.get_type();
-        Self { span, expr, ty }
+        let mut code = vec![];
+        code.extend(expr.code());
+        Self {
+            span,
+            expr,
+            ty,
+            code,
+        }
     }
 }
 
@@ -632,6 +800,7 @@ pub struct CommIf {
     pub false_fst_comm: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub ty: Type,
+    pub code: Vec<IlocInst>,
 }
 
 impl CommIf {
@@ -642,6 +811,8 @@ impl CommIf {
         false_fst_comm: Box<ASTNode>,
     ) -> Self {
         let ty = expr.get_type();
+        let mut code = vec![];
+        code.extend(expr.code());
         Self {
             span,
             expr,
@@ -649,11 +820,13 @@ impl CommIf {
             false_fst_comm,
             next: Box::new(ASTNode::None),
             ty,
+            code,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -664,22 +837,27 @@ pub struct CommWhile {
     pub fst_comm: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub ty: Type,
+    pub code: Vec<IlocInst>,
 }
 
 impl CommWhile {
     pub fn new(span: Span, expr: Box<ASTNode>, fst_comm: Box<ASTNode>) -> Self {
         let ty = expr.get_type();
+        let mut code = vec![];
+        code.extend(expr.code());
         Self {
             span,
             expr,
             fst_comm,
             next: Box::new(ASTNode::None),
             ty,
+            code,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -690,6 +868,7 @@ pub struct ArrIdx {
     pub expr_tree: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub ty: Type,
+    pub code: Vec<IlocInst>,
 }
 
 impl ArrIdx {
@@ -701,11 +880,13 @@ impl ArrIdx {
             expr_tree,
             next: Box::new(ASTNode::None),
             ty,
+            code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -715,6 +896,7 @@ pub struct ExprIdxNode {
     pub child_left: Box<ASTNode>,
     pub child_right: Box<ASTNode>,
     pub ty: Type,
+    pub code: Vec<IlocInst>,
 }
 
 impl ExprIdxNode {
@@ -730,6 +912,7 @@ impl ExprIdxNode {
             child_left,
             child_right,
             ty,
+            code: vec![],
         })
     }
 }
@@ -741,6 +924,8 @@ pub struct BinOp {
     pub child_right: Box<ASTNode>,
     pub next: Box<ASTNode>,
     ty: Type,
+    temp: String,
+    code: Vec<IlocInst>,
 }
 
 impl BinOp {
@@ -751,17 +936,33 @@ impl BinOp {
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let ty = try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
+        let temp = get_new_temp();
+        let inst = IlocInst::Arithm(FullOp::new(
+            "".to_string(),
+            child_left.temp(),
+            child_right.temp(),
+            temp.clone(),
+        ));
+        let mut code = vec![];
+
+        code.extend(child_left.code());
+        code.extend(child_right.code());
+        code.push(inst);
+
         Ok(Self {
             span,
             child_left,
             child_right,
             next: Box::new(ASTNode::None),
             ty,
+            temp,
+            code,
         })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -771,6 +972,7 @@ pub struct UnOp {
     pub child: Box<ASTNode>,
     pub next: Box<ASTNode>,
     ty: Type,
+    code: Vec<IlocInst>,
 }
 
 impl UnOp {
@@ -781,11 +983,13 @@ impl UnOp {
             child,
             next: Box::new(ASTNode::None),
             ty,
+            code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -793,6 +997,7 @@ impl UnOp {
 pub struct LitInt {
     pub span: Span,
     pub next: Box<ASTNode>,
+    code: Vec<IlocInst>,
 }
 
 impl LitInt {
@@ -800,11 +1005,13 @@ impl LitInt {
         Self {
             span,
             next: Box::new(ASTNode::None),
+            code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -812,6 +1019,7 @@ impl LitInt {
 pub struct LitFloat {
     pub span: Span,
     pub next: Box<ASTNode>,
+    code: Vec<IlocInst>,
 }
 
 impl LitFloat {
@@ -819,11 +1027,13 @@ impl LitFloat {
         Self {
             span,
             next: Box::new(ASTNode::None),
+            code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -831,6 +1041,7 @@ impl LitFloat {
 pub struct LitChar {
     pub span: Span,
     pub next: Box<ASTNode>,
+    code: Vec<IlocInst>,
 }
 
 impl LitChar {
@@ -838,11 +1049,13 @@ impl LitChar {
         Self {
             span,
             next: Box::new(ASTNode::None),
+            code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -850,6 +1063,7 @@ impl LitChar {
 pub struct LitBool {
     pub span: Span,
     pub next: Box<ASTNode>,
+    code: Vec<IlocInst>,
 }
 
 impl LitBool {
@@ -857,11 +1071,13 @@ impl LitBool {
         Self {
             span,
             next: Box::new(ASTNode::None),
+            code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -870,6 +1086,8 @@ pub struct Identifier {
     pub span: Span,
     pub next: Box<ASTNode>,
     ty: Type,
+    code: Vec<IlocInst>,
+    temp: String,
 }
 
 impl Identifier {
@@ -887,10 +1105,13 @@ impl Identifier {
             span,
             next: Box::new(ASTNode::None),
             ty,
+            code: vec![],
+            temp: get_new_temp(),
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
