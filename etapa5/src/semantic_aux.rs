@@ -4,7 +4,7 @@ use cfgrammar::Span;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
 
-use crate::{ast::ASTNode, errors::ParsingError, get_symbol};
+use crate::{ast::ASTNode, errors::ParsingError, get_symbol, SCOPE_STACK};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -434,7 +434,12 @@ impl ScopeStack {
     }
 
     pub fn is_global(&self, symbol: &SymbolEntry) -> bool {
-        false
+        let first = self.0.first().unwrap();
+        let global = first.get(&symbol.get_key());
+        match global {
+            Some(_) => true,
+            None => false,
+        }
     }
 }
 
@@ -674,4 +679,8 @@ pub fn check_declaration(
         }
         _ => Ok(symbol),
     }
+}
+
+pub fn check_global(symbol: &SymbolEntry) -> bool {
+    SCOPE_STACK.with(|stack| stack.borrow().is_global(symbol))
 }

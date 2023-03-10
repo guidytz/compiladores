@@ -4,8 +4,8 @@ use lrpar::NonStreamingLexer;
 
 use crate::{
     errors::ParsingError,
-    get_new_temp, get_symbol,
-    iloc_aux::{FullOp, IlocInst},
+    get_new_temp, get_reg, get_symbol,
+    iloc_aux::{FullOp, IlocInst, In2Out, InOut},
     semantic_aux::{try_coersion, Type},
 };
 
@@ -606,12 +606,22 @@ impl ASTNode {
             ASTNode::ExprMod(_) => todo!(),
             ASTNode::ExprNeg(_) => todo!(),
             ASTNode::ExprInv(_) => todo!(),
-            ASTNode::LitInt(_) => todo!(),
+            ASTNode::LitInt(node) => node.temp.clone(),
             ASTNode::LitFloat(_) => todo!(),
             ASTNode::LitChar(_) => todo!(),
             ASTNode::LitBool(_) => todo!(),
             ASTNode::Identifier(node) => node.temp.clone(),
             ASTNode::None => todo!(),
+        }
+    }
+
+    pub fn gen_load(
+        &mut self,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<(), ParsingError> {
+        match self {
+            ASTNode::Identifier(node) => node.gen_load(lexer),
+            _ => Ok(()),
         }
     }
 }
@@ -721,8 +731,17 @@ impl CommAttrib {
     ) -> Result<Self, ParsingError> {
         try_coersion(ident.get_type(), expr.get_type(), span, lexer)?;
         let ty = ident.get_type();
+        let symbol = get_symbol(ident.span()?, lexer)?;
+        let reg = get_reg(&symbol);
+        let inst = IlocInst::StoreDesl(In2Out::new(
+            "storeAI".to_string(),
+            expr.temp(),
+            reg,
+            symbol.desloc().to_string(),
+        ));
         let mut code = vec![];
         code.extend(expr.code());
+        code.push(inst);
         Ok(Self {
             span,
             ident,
@@ -998,14 +1017,19 @@ pub struct LitInt {
     pub span: Span,
     pub next: Box<ASTNode>,
     code: Vec<IlocInst>,
+    temp: String,
 }
 
 impl LitInt {
-    pub fn new(span: Span) -> Self {
+    pub fn new(span: Span, lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
+        let val = lexer.span_str(span).to_string();
+        let temp = get_new_temp();
+        let inst = IlocInst::LoadImed(InOut::new("loadI".to_string(), val, temp.clone()));
         Self {
             span,
             next: Box::new(ASTNode::None),
-            code: vec![],
+            code: vec![inst],
+            temp,
         }
     }
 
@@ -1106,12 +1130,29 @@ impl Identifier {
             next: Box::new(ASTNode::None),
             ty,
             code: vec![],
-            temp: get_new_temp(),
+            temp: "".to_string(),
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
         self.code.extend(next.code());
+    }
+
+    pub fn gen_load(
+        &mut self,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<(), ParsingError> {
+        let symbol = get_symbol(self.span, lexer)?;
+        let desloc = symbol.desloc().to_string();
+        let reg = get_reg(&symbol);
+        self.temp = get_new_temp();
+        self.code = vec![IlocInst::LoadDesl(FullOp::new(
+            "loadAI".to_string(),
+            reg,
+            desloc,
+            self.temp.clone(),
+        ))];
+        Ok(())
     }
 }

@@ -372,7 +372,11 @@ exp_end -> Result<ASTNode, ParsingError>:
         operand         { $1 } ;
 
 operand -> Result<ASTNode, ParsingError>:
-        checked_ident   { $1 } |
+        checked_ident   {
+                let mut ident = $1?;
+                ident.gen_load($lexer)?;
+                Ok(ident)
+        } |
         arr_ident       { $1 } |
         literals        { $1 } |
         fun_call        { $1 } ;
@@ -400,7 +404,7 @@ literals -> Result<ASTNode, ParsingError>:
         "TK_LIT_INT" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
                 add_symbol_to_curr_st(lit_entry)?;
-                Ok(ASTNode::LitInt(LitInt::new($span)))
+                Ok(ASTNode::LitInt(LitInt::new($span, $lexer)))
         } |
         "TK_LIT_FLOAT" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);

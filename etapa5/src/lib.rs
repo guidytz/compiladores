@@ -4,7 +4,7 @@ use cfgrammar::Span;
 use errors::ParsingError;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
-use semantic_aux::{ScopeStack, SymbolEntry};
+use semantic_aux::{check_global, ScopeStack, SymbolEntry};
 
 pub mod ast;
 pub mod errors;
@@ -59,4 +59,11 @@ pub fn get_new_label() -> String {
     LABEL_COUNTER.with(|counter| *counter.borrow_mut() += 1);
 
     format!("L{temp_val}")
+}
+
+pub fn get_reg(symbol: &SymbolEntry) -> String {
+    match check_global(symbol) {
+        true => "rbss".to_string(),
+        false => "rfp".to_string(),
+    }
 }
