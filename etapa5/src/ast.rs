@@ -4,8 +4,8 @@ use lrpar::NonStreamingLexer;
 
 use crate::{
     errors::ParsingError,
-    get_new_temp, get_reg, get_symbol,
-    iloc_aux::{FullOp, IlocInst, In2Out, InOut},
+    get_new_label, get_new_temp, get_reg, get_symbol,
+    iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump},
     semantic_aux::{try_coersion, Type},
 };
 
@@ -20,14 +20,14 @@ pub enum ASTNode {
     CommWhile(CommWhile),
     ArrIdx(ArrIdx),
     ExprIdxNode(ExprIdxNode),
+    ExprEq(CmpOp),
+    ExprNeq(CmpOp),
+    ExprLt(CmpOp),
+    ExprGt(CmpOp),
+    ExprLe(CmpOp),
+    ExprGe(CmpOp),
     ExprOr(BinOp),
     ExprAnd(BinOp),
-    ExprEq(BinOp),
-    ExprNeq(BinOp),
-    ExprLt(BinOp),
-    ExprGt(BinOp),
-    ExprLe(BinOp),
-    ExprGe(BinOp),
     ExprAdd(BinOp),
     ExprSub(BinOp),
     ExprMul(BinOp),
@@ -247,14 +247,22 @@ impl ASTNode {
                 str += &node.child_left.to_string(lexer);
                 str += &node.child_right.to_string(lexer);
             }
-            ASTNode::ExprOr(node)
-            | ASTNode::ExprAnd(node)
-            | ASTNode::ExprEq(node)
+            ASTNode::ExprEq(node)
             | ASTNode::ExprNeq(node)
             | ASTNode::ExprLt(node)
             | ASTNode::ExprGt(node)
             | ASTNode::ExprLe(node)
-            | ASTNode::ExprGe(node)
+            | ASTNode::ExprGe(node) => {
+                str += &node.child_left.parent_string(&self);
+                str += &node.child_right.parent_string(&self);
+                str += &node.next.parent_string(&self);
+
+                str += &node.child_left.to_string(lexer);
+                str += &node.child_right.to_string(lexer);
+                str += &node.next.to_string(lexer);
+            }
+            ASTNode::ExprOr(node)
+            | ASTNode::ExprAnd(node)
             | ASTNode::ExprAdd(node)
             | ASTNode::ExprSub(node)
             | ASTNode::ExprMul(node)
@@ -484,12 +492,78 @@ impl ASTNode {
             ASTNode::CommWhile(node) => node.code.clone(),
             ASTNode::ArrIdx(node) => node.code.clone(),
             ASTNode::ExprIdxNode(node) => node.code.clone(),
-            ASTNode::ExprEq(node) => node.code.clone(),
-            ASTNode::ExprNeq(node) => node.code.clone(),
-            ASTNode::ExprLt(node) => node.code.clone(),
-            ASTNode::ExprGt(node) => node.code.clone(),
-            ASTNode::ExprLe(node) => node.code.clone(),
-            ASTNode::ExprGe(node) => node.code.clone(),
+            ASTNode::ExprEq(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Cmp(mut inst) => {
+                        inst.name = "cmp_EQ".to_string();
+                        IlocInst::Cmp(inst)
+                    }
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprNeq(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Cmp(mut inst) => {
+                        inst.name = "cmp_NE".to_string();
+                        IlocInst::Cmp(inst)
+                    }
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprLt(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Cmp(mut inst) => {
+                        inst.name = "cmp_LT".to_string();
+                        IlocInst::Cmp(inst)
+                    }
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprGt(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Cmp(mut inst) => {
+                        inst.name = "cmp_GT".to_string();
+                        IlocInst::Cmp(inst)
+                    }
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprLe(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Cmp(mut inst) => {
+                        inst.name = "cmp_LE".to_string();
+                        IlocInst::Cmp(inst)
+                    }
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprGe(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Cmp(mut inst) => {
+                        inst.name = "cmp_GE".to_string();
+                        IlocInst::Cmp(inst)
+                    }
+                    inst => inst,
+                })
+                .collect(),
             ASTNode::ExprOr(node) => {
                 let mut code = node.code.clone();
                 let mut inst = code.pop();
@@ -986,6 +1060,91 @@ impl BinOp {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct CmpOp {
+    pub span: Span,
+    pub child_left: Box<ASTNode>,
+    pub child_right: Box<ASTNode>,
+    pub next: Box<ASTNode>,
+    ty: Type,
+    temp: String,
+    code: Vec<IlocInst>,
+}
+
+impl CmpOp {
+    pub fn new(
+        span: Span,
+        child_left: Box<ASTNode>,
+        child_right: Box<ASTNode>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        let ty = try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
+        let temp = get_new_temp();
+
+        let label_true = get_new_label();
+        let label_false = get_new_label();
+        let label_end = get_new_label();
+
+        let cmp_inst = IlocInst::Cmp(CmpInst::new(
+            "".to_string(),
+            child_left.temp(),
+            child_right.temp(),
+            temp.clone(),
+        ));
+
+        let cbr_inst = IlocInst::Cbr(In2Out::new(
+            "cbr".to_string(),
+            temp.clone(),
+            label_true.clone(),
+            label_false.clone(),
+        ));
+
+        let load_true = IlocInst::LoadImed(InOut::new(
+            "loadI".to_string(),
+            "1".to_string(),
+            temp.clone(),
+        ))
+        .add_label(label_true);
+
+        let jump_later = IlocInst::Jump(Jump::new("jumpI".to_string(), label_end.clone()));
+
+        let load_false = IlocInst::LoadImed(InOut::new(
+            "loadI".to_string(),
+            "0".to_string(),
+            temp.clone(),
+        ))
+        .add_label(label_false);
+
+        let nop_inst = IlocInst::Nop(Some(label_end));
+
+        let mut code = vec![];
+
+        code.extend(child_left.code());
+        code.extend(child_right.code());
+        code.push(cmp_inst);
+        code.push(cbr_inst);
+        code.push(load_true);
+        code.push(jump_later);
+        code.push(load_false);
+        code.push(nop_inst);
+
+        Ok(Self {
+            span,
+            child_left,
+            child_right,
+            next: Box::new(ASTNode::None),
+            ty,
+            temp,
+            code,
+        })
+    }
+
+    pub fn add_next(&mut self, next: Box<ASTNode>) {
+        self.next = next.clone();
+        self.code.extend(next.code());
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct UnOp {
     pub span: Span,
     pub child: Box<ASTNode>,
@@ -1141,9 +1300,9 @@ impl Identifier {
 
     pub fn gen_load(
         &mut self,
-        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<(), ParsingError> {
-        let symbol = get_symbol(self.span, lexer)?;
+        let symbol = get_symbol(self.span, _lexer)?;
         let desloc = symbol.desloc().to_string();
         let reg = get_reg(&symbol);
         self.temp = get_new_temp();

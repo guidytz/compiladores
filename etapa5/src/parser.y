@@ -280,13 +280,13 @@ neq_eq_op -> Result<ASTNode, ParsingError>:
         neq_eq_op "TK_OC_EQ" desig_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right, $lexer)?;
+                let node = CmpOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprEq(node))
         } |
         neq_eq_op "TK_OC_NE" desig_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right, $lexer)?;
+                let node = CmpOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprNeq(node))
         } |
         desig_op  { $1 } ;
@@ -295,25 +295,25 @@ desig_op -> Result<ASTNode, ParsingError>:
         desig_op '<' sum_min_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right, $lexer)?;
+                let node = CmpOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprLt(node))
          } |
         desig_op '>' sum_min_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right, $lexer)?;
+                let node = CmpOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprGt(node))
          } |
         desig_op "TK_OC_LE" sum_min_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right, $lexer)?;
+                let node = CmpOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprLe(node))
          } |
         desig_op "TK_OC_GE" sum_min_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right, $lexer)?;
+                let node = CmpOp::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprGe(node))
          } |
         sum_min_op  { $1 } ;
@@ -473,6 +473,7 @@ use etapa5::{ast::{
         CommWhile,
         ArrIdx,
         ExprIdxNode,
+        CmpOp,
         BinOp,
         UnOp,
         LitInt,
