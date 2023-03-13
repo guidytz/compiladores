@@ -971,8 +971,42 @@ pub struct CommWhile {
 impl CommWhile {
     pub fn new(span: Span, expr: Box<ASTNode>, fst_comm: Box<ASTNode>) -> Self {
         let ty = expr.get_type();
+        let label_expr = get_new_label();
+        let label_true = get_new_label();
+        let label_later = get_new_label();
+
+        let temp = get_new_temp();
+        let op_temp = get_new_temp();
+        let nop_expr = IlocInst::Nop(Some(label_expr.clone()));
+        let load_op =
+            IlocInst::LoadImed(InOut::new("loadI".to_string(), 0.to_string(), temp.clone()));
+        let cmp_ne = IlocInst::Cmp(CmpInst::new(
+            "cmp_NE".to_string(),
+            expr.temp(),
+            temp,
+            op_temp.clone(),
+        ));
+        let cbr = IlocInst::Cbr(In2Out::new(
+            "cbr".to_string(),
+            op_temp,
+            label_true.clone(),
+            label_later.clone(),
+        ));
+        let true_nop = IlocInst::Nop(Some(label_true));
+        let jump_back = IlocInst::Jump(Jump::new("jumpI".to_string(), label_expr.clone()));
+        let later_nop = IlocInst::Nop(Some(label_later));
+
         let mut code = vec![];
+        code.push(nop_expr);
         code.extend(expr.code());
+        code.push(load_op);
+        code.push(cmp_ne);
+        code.push(cbr);
+        code.push(true_nop);
+        code.extend(fst_comm.code());
+        code.push(jump_back);
+        code.push(later_nop);
+
         Self {
             span,
             expr,
