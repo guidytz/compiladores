@@ -16,11 +16,11 @@ clean:
 	rm -rf target
 
 test: # only works with test data dir
-	cargo test --features onlylex 	--no-default-features --test test-etapa1 -- --nocapture
-	cargo test --features lexparser --no-default-features --test test-etapa2 -- --nocapture
-	cargo test --features lexparser --no-default-features --test test-etapa3 -- --nocapture
-	cargo test --features lexparser --features semantics  --test test-etapa4 -- --nocapture
-	cargo test --features lexparser --features semantics  --test test-etapa5 -- --nocapture
+	cargo test --features onlylex 							--no-default-features --test test-etapa1 -- --nocapture
+	cargo test --features lexparser 						--no-default-features --test test-etapa2 -- --nocapture
+	cargo test --features lexparser 						--no-default-features --test test-etapa3 -- --nocapture
+	cargo test --features lexparser --features semantics  	--no-default-features --test test-etapa4 -- --nocapture
+	cargo test --features lexparser --features semantics --features code  		  --test test-etapa5 -- --nocapture
 
 zip:
 	tar cvzf etapa5.tgz Makefile Cargo.toml build.rs src/ tests/

@@ -4,7 +4,9 @@ use cfgrammar::Span;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
 
-use crate::{ast::ASTNode, errors::ParsingError, get_symbol, SCOPE_STACK};
+#[cfg(feature = "semantics")]
+use crate::SCOPE_STACK;
+use crate::{ast::ASTNode, errors::ParsingError, get_symbol};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -132,14 +134,14 @@ impl SymbolEntry {
 
     pub fn desloc(&self) -> u32 {
         match self {
-            SymbolEntry::LitInt(_) => todo!(),
-            SymbolEntry::LitFloat(_) => todo!(),
-            SymbolEntry::LitChar(_) => todo!(),
-            SymbolEntry::LitBool(_) => todo!(),
+            SymbolEntry::LitInt(_) => 0,
+            SymbolEntry::LitFloat(_) => 0,
+            SymbolEntry::LitChar(_) => 0,
+            SymbolEntry::LitBool(_) => 0,
             SymbolEntry::Var(var) => var.desloc,
-            SymbolEntry::Arr(_) => todo!(),
-            SymbolEntry::Fn(_) => todo!(),
-            SymbolEntry::None => todo!(),
+            SymbolEntry::Arr(_) => 0,
+            SymbolEntry::Fn(_) => 0,
+            SymbolEntry::None => 0,
         }
     }
 
@@ -681,6 +683,9 @@ pub fn check_declaration(
     }
 }
 
-pub fn check_global(symbol: &SymbolEntry) -> bool {
-    SCOPE_STACK.with(|stack| stack.borrow().is_global(symbol))
+pub fn check_global(_symbol: &SymbolEntry) -> bool {
+    #[cfg(feature = "semantics")]
+    return SCOPE_STACK.with(|stack| stack.borrow().is_global(_symbol));
+    #[cfg(not(feature = "semantics"))]
+    false
 }

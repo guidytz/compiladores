@@ -4,9 +4,14 @@ use lrpar::NonStreamingLexer;
 
 use crate::{
     errors::ParsingError,
-    get_new_label, get_new_temp, get_reg, get_symbol,
-    iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump},
+    get_new_temp, get_symbol,
     semantic_aux::{try_coersion, Type},
+};
+
+#[cfg(feature = "code")]
+use crate::{
+    get_new_label, get_reg,
+    iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump},
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -481,6 +486,7 @@ impl ASTNode {
         }
     }
 
+    #[cfg(feature = "code")]
     pub fn code(&self) -> Vec<IlocInst> {
         match self {
             ASTNode::FnDeclare(node) => node.code.clone(),
@@ -654,6 +660,7 @@ impl ASTNode {
         }
     }
 
+    #[cfg(feature = "code")]
     pub fn temp(&self) -> String {
         match self {
             ASTNode::FnDeclare(_) => todo!(),
@@ -706,18 +713,25 @@ pub struct FnDeclare {
     pub comm: Box<ASTNode>,
     pub next_fn: Box<ASTNode>,
     pub name: Span,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
 impl FnDeclare {
     pub fn new(span: Span, comm: Box<ASTNode>, name: Span) -> Self {
-        let mut code = vec![];
-        code.extend(comm.code());
+        #[cfg(feature = "code")]
+        let code = {
+            let mut code = vec![];
+            code.extend(comm.code());
+            code
+        };
+
         Self {
             span,
             comm,
             next_fn: Box::new(ASTNode::None),
             name,
+            #[cfg(feature = "code")]
             code,
         }
     }
@@ -734,6 +748,7 @@ pub struct VarInit {
     pub lit: Box<ASTNode>,
     pub next: Option<Box<ASTNode>>,
     pub ty: Type,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
@@ -752,6 +767,7 @@ impl VarInit {
             lit,
             next,
             ty,
+            #[cfg(feature = "code")]
             code: vec![],
         }
     }
@@ -766,6 +782,7 @@ impl VarInit {
             }
             None => self.next = Some(next.clone()),
         }
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
         Ok(())
     }
@@ -793,6 +810,7 @@ pub struct CommAttrib {
     pub expr: Box<ASTNode>,
     pub next: Box<ASTNode>,
     ty: Type,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
@@ -805,29 +823,37 @@ impl CommAttrib {
     ) -> Result<Self, ParsingError> {
         try_coersion(ident.get_type(), expr.get_type(), span, lexer)?;
         let ty = ident.get_type();
-        let symbol = get_symbol(ident.span()?, lexer)?;
-        let reg = get_reg(&symbol);
-        let inst = IlocInst::StoreDesl(In2Out::new(
-            "storeAI".to_string(),
-            expr.temp(),
-            reg,
-            symbol.desloc().to_string(),
-        ));
-        let mut code = vec![];
-        code.extend(expr.code());
-        code.push(inst);
+
+        #[cfg(feature = "code")]
+        let code = {
+            let symbol = get_symbol(ident.span()?, lexer).expect("It was here");
+            let reg = get_reg(&symbol);
+            let inst = IlocInst::StoreDesl(In2Out::new(
+                "storeAI".to_string(),
+                expr.temp(),
+                reg,
+                symbol.desloc().to_string(),
+            ));
+            let mut code = vec![];
+            code.extend(expr.code());
+            code.push(inst);
+            code
+        };
+
         Ok(Self {
             span,
             ident,
             expr,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             code,
         })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -839,26 +865,33 @@ pub struct CommFnCall {
     pub next: Box<ASTNode>,
     pub name: Box<ASTNode>,
     pub ty: Type,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
 impl CommFnCall {
     pub fn new(span: Span, expr: Box<ASTNode>, ident: Box<ASTNode>) -> Self {
         let ty = ident.get_type();
-        let mut code = vec![];
-        code.extend(expr.code());
+        #[cfg(feature = "code")]
+        let code = {
+            let mut code = vec![];
+            code.extend(expr.code());
+            code
+        };
         Self {
             span,
             expr,
             name: ident,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             code,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -868,18 +901,25 @@ pub struct CommReturn {
     pub span: Span,
     pub expr: Box<ASTNode>,
     ty: Type,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
 impl CommReturn {
     pub fn new(span: Span, expr: Box<ASTNode>) -> Self {
         let ty = expr.get_type();
-        let mut code = vec![];
-        code.extend(expr.code());
+
+        #[cfg(feature = "code")]
+        let code = {
+            let mut code = vec![];
+            code.extend(expr.code());
+            code
+        };
         Self {
             span,
             expr,
             ty,
+            #[cfg(feature = "code")]
             code,
         }
     }
@@ -893,6 +933,7 @@ pub struct CommIf {
     pub false_fst_comm: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub ty: Type,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
@@ -904,42 +945,46 @@ impl CommIf {
         false_fst_comm: Box<ASTNode>,
     ) -> Self {
         let ty = expr.get_type();
-        let label_true = get_new_label();
-        let label_false = get_new_label();
-        let label_later = get_new_label();
+        #[cfg(feature = "code")]
+        let code = {
+            let label_true = get_new_label();
+            let label_false = get_new_label();
+            let label_later = get_new_label();
 
-        let temp = get_new_temp();
-        let op_temp = get_new_temp();
-        let load_op =
-            IlocInst::LoadImed(InOut::new("loadI".to_string(), 0.to_string(), temp.clone()));
-        let cmp_ne = IlocInst::Cmp(CmpInst::new(
-            "cmp_NE".to_string(),
-            expr.temp(),
-            temp,
-            op_temp.clone(),
-        ));
-        let cbr = IlocInst::Cbr(In2Out::new(
-            "cbr".to_string(),
-            op_temp,
-            label_true.clone(),
-            label_false.clone(),
-        ));
-        let true_nop = IlocInst::Nop(Some(label_true));
-        let jump_later = IlocInst::Jump(Jump::new("jumpI".to_string(), label_later.clone()));
-        let false_nop = IlocInst::Nop(Some(label_false));
-        let later_nop = IlocInst::Nop(Some(label_later));
+            let temp = get_new_temp();
+            let op_temp = get_new_temp();
+            let load_op =
+                IlocInst::LoadImed(InOut::new("loadI".to_string(), 0.to_string(), temp.clone()));
+            let cmp_ne = IlocInst::Cmp(CmpInst::new(
+                "cmp_NE".to_string(),
+                expr.temp(),
+                temp,
+                op_temp.clone(),
+            ));
+            let cbr = IlocInst::Cbr(In2Out::new(
+                "cbr".to_string(),
+                op_temp,
+                label_true.clone(),
+                label_false.clone(),
+            ));
+            let true_nop = IlocInst::Nop(Some(label_true));
+            let jump_later = IlocInst::Jump(Jump::new("jumpI".to_string(), label_later.clone()));
+            let false_nop = IlocInst::Nop(Some(label_false));
+            let later_nop = IlocInst::Nop(Some(label_later));
 
-        let mut code = vec![];
-        code.extend(expr.code());
-        code.push(load_op);
-        code.push(cmp_ne);
-        code.push(cbr);
-        code.push(true_nop);
-        code.extend(true_fst_comm.code());
-        code.push(jump_later);
-        code.push(false_nop);
-        code.extend(false_fst_comm.code());
-        code.push(later_nop);
+            let mut code = vec![];
+            code.extend(expr.code());
+            code.push(load_op);
+            code.push(cmp_ne);
+            code.push(cbr);
+            code.push(true_nop);
+            code.extend(true_fst_comm.code());
+            code.push(jump_later);
+            code.push(false_nop);
+            code.extend(false_fst_comm.code());
+            code.push(later_nop);
+            code
+        };
 
         Self {
             span,
@@ -948,12 +993,14 @@ impl CommIf {
             false_fst_comm,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             code,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -965,47 +1012,52 @@ pub struct CommWhile {
     pub fst_comm: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub ty: Type,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
 impl CommWhile {
     pub fn new(span: Span, expr: Box<ASTNode>, fst_comm: Box<ASTNode>) -> Self {
         let ty = expr.get_type();
-        let label_expr = get_new_label();
-        let label_true = get_new_label();
-        let label_later = get_new_label();
+        #[cfg(feature = "code")]
+        let code = {
+            let label_expr = get_new_label();
+            let label_true = get_new_label();
+            let label_later = get_new_label();
 
-        let temp = get_new_temp();
-        let op_temp = get_new_temp();
-        let nop_expr = IlocInst::Nop(Some(label_expr.clone()));
-        let load_op =
-            IlocInst::LoadImed(InOut::new("loadI".to_string(), 0.to_string(), temp.clone()));
-        let cmp_ne = IlocInst::Cmp(CmpInst::new(
-            "cmp_NE".to_string(),
-            expr.temp(),
-            temp,
-            op_temp.clone(),
-        ));
-        let cbr = IlocInst::Cbr(In2Out::new(
-            "cbr".to_string(),
-            op_temp,
-            label_true.clone(),
-            label_later.clone(),
-        ));
-        let true_nop = IlocInst::Nop(Some(label_true));
-        let jump_back = IlocInst::Jump(Jump::new("jumpI".to_string(), label_expr.clone()));
-        let later_nop = IlocInst::Nop(Some(label_later));
+            let temp = get_new_temp();
+            let op_temp = get_new_temp();
+            let nop_expr = IlocInst::Nop(Some(label_expr.clone()));
+            let load_op =
+                IlocInst::LoadImed(InOut::new("loadI".to_string(), 0.to_string(), temp.clone()));
+            let cmp_ne = IlocInst::Cmp(CmpInst::new(
+                "cmp_NE".to_string(),
+                expr.temp(),
+                temp,
+                op_temp.clone(),
+            ));
+            let cbr = IlocInst::Cbr(In2Out::new(
+                "cbr".to_string(),
+                op_temp,
+                label_true.clone(),
+                label_later.clone(),
+            ));
+            let true_nop = IlocInst::Nop(Some(label_true));
+            let jump_back = IlocInst::Jump(Jump::new("jumpI".to_string(), label_expr.clone()));
+            let later_nop = IlocInst::Nop(Some(label_later));
 
-        let mut code = vec![];
-        code.push(nop_expr);
-        code.extend(expr.code());
-        code.push(load_op);
-        code.push(cmp_ne);
-        code.push(cbr);
-        code.push(true_nop);
-        code.extend(fst_comm.code());
-        code.push(jump_back);
-        code.push(later_nop);
+            let mut code = vec![];
+            code.push(nop_expr);
+            code.extend(expr.code());
+            code.push(load_op);
+            code.push(cmp_ne);
+            code.push(cbr);
+            code.push(true_nop);
+            code.extend(fst_comm.code());
+            code.push(jump_back);
+            code.push(later_nop);
+            code
+        };
 
         Self {
             span,
@@ -1013,12 +1065,14 @@ impl CommWhile {
             fst_comm,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             code,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1030,6 +1084,7 @@ pub struct ArrIdx {
     pub expr_tree: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub ty: Type,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
@@ -1042,12 +1097,14 @@ impl ArrIdx {
             expr_tree,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1058,6 +1115,7 @@ pub struct ExprIdxNode {
     pub child_left: Box<ASTNode>,
     pub child_right: Box<ASTNode>,
     pub ty: Type,
+    #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
 }
 
@@ -1074,6 +1132,7 @@ impl ExprIdxNode {
             child_left,
             child_right,
             ty,
+            #[cfg(feature = "code")]
             code: vec![],
         })
     }
@@ -1086,7 +1145,9 @@ pub struct BinOp {
     pub child_right: Box<ASTNode>,
     pub next: Box<ASTNode>,
     ty: Type,
+    #[cfg(feature = "code")]
     temp: String,
+    #[cfg(feature = "code")]
     code: Vec<IlocInst>,
 }
 
@@ -1098,18 +1159,23 @@ impl BinOp {
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let ty = try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
+        #[cfg(feature = "code")]
         let temp = get_new_temp();
-        let inst = IlocInst::Arithm(FullOp::new(
-            "".to_string(),
-            child_left.temp(),
-            child_right.temp(),
-            temp.clone(),
-        ));
-        let mut code = vec![];
+        #[cfg(feature = "code")]
+        let code = {
+            let inst = IlocInst::Arithm(FullOp::new(
+                "".to_string(),
+                child_left.temp(),
+                child_right.temp(),
+                temp.clone(),
+            ));
+            let mut code = vec![];
 
-        code.extend(child_left.code());
-        code.extend(child_right.code());
-        code.push(inst);
+            code.extend(child_left.code());
+            code.extend(child_right.code());
+            code.push(inst);
+            code
+        };
 
         Ok(Self {
             span,
@@ -1117,13 +1183,16 @@ impl BinOp {
             child_right,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             temp,
+            #[cfg(feature = "code")]
             code,
         })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1135,7 +1204,9 @@ pub struct CmpOp {
     pub child_right: Box<ASTNode>,
     pub next: Box<ASTNode>,
     ty: Type,
+    #[cfg(feature = "code")]
     temp: String,
+    #[cfg(feature = "code")]
     code: Vec<IlocInst>,
 }
 
@@ -1147,54 +1218,59 @@ impl CmpOp {
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let ty = try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
+        #[cfg(feature = "code")]
         let temp = get_new_temp();
 
-        let label_true = get_new_label();
-        let label_false = get_new_label();
-        let label_end = get_new_label();
+        #[cfg(feature = "code")]
+        let code = {
+            let label_true = get_new_label();
+            let label_false = get_new_label();
+            let label_end = get_new_label();
 
-        let cmp_inst = IlocInst::Cmp(CmpInst::new(
-            "".to_string(),
-            child_left.temp(),
-            child_right.temp(),
-            temp.clone(),
-        ));
+            let cmp_inst = IlocInst::Cmp(CmpInst::new(
+                "".to_string(),
+                child_left.temp(),
+                child_right.temp(),
+                temp.clone(),
+            ));
 
-        let cbr_inst = IlocInst::Cbr(In2Out::new(
-            "cbr".to_string(),
-            temp.clone(),
-            label_true.clone(),
-            label_false.clone(),
-        ));
+            let cbr_inst = IlocInst::Cbr(In2Out::new(
+                "cbr".to_string(),
+                temp.clone(),
+                label_true.clone(),
+                label_false.clone(),
+            ));
 
-        let load_true = IlocInst::LoadImed(InOut::new(
-            "loadI".to_string(),
-            "1".to_string(),
-            temp.clone(),
-        ))
-        .add_label(label_true);
+            let load_true = IlocInst::LoadImed(InOut::new(
+                "loadI".to_string(),
+                "1".to_string(),
+                temp.clone(),
+            ))
+            .add_label(label_true);
 
-        let jump_later = IlocInst::Jump(Jump::new("jumpI".to_string(), label_end.clone()));
+            let jump_later = IlocInst::Jump(Jump::new("jumpI".to_string(), label_end.clone()));
 
-        let load_false = IlocInst::LoadImed(InOut::new(
-            "loadI".to_string(),
-            "0".to_string(),
-            temp.clone(),
-        ))
-        .add_label(label_false);
+            let load_false = IlocInst::LoadImed(InOut::new(
+                "loadI".to_string(),
+                "0".to_string(),
+                temp.clone(),
+            ))
+            .add_label(label_false);
 
-        let nop_inst = IlocInst::Nop(Some(label_end));
+            let nop_inst = IlocInst::Nop(Some(label_end));
 
-        let mut code = vec![];
+            let mut code = vec![];
 
-        code.extend(child_left.code());
-        code.extend(child_right.code());
-        code.push(cmp_inst);
-        code.push(cbr_inst);
-        code.push(load_true);
-        code.push(jump_later);
-        code.push(load_false);
-        code.push(nop_inst);
+            code.extend(child_left.code());
+            code.extend(child_right.code());
+            code.push(cmp_inst);
+            code.push(cbr_inst);
+            code.push(load_true);
+            code.push(jump_later);
+            code.push(load_false);
+            code.push(nop_inst);
+            code
+        };
 
         Ok(Self {
             span,
@@ -1202,13 +1278,16 @@ impl CmpOp {
             child_right,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             temp,
+            #[cfg(feature = "code")]
             code,
         })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1219,6 +1298,7 @@ pub struct UnOp {
     pub child: Box<ASTNode>,
     pub next: Box<ASTNode>,
     ty: Type,
+    #[cfg(feature = "code")]
     code: Vec<IlocInst>,
 }
 
@@ -1230,12 +1310,14 @@ impl UnOp {
             child,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1244,25 +1326,33 @@ impl UnOp {
 pub struct LitInt {
     pub span: Span,
     pub next: Box<ASTNode>,
+    #[cfg(feature = "code")]
     code: Vec<IlocInst>,
     temp: String,
 }
 
 impl LitInt {
-    pub fn new(span: Span, lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
-        let val = lexer.span_str(span).to_string();
+    pub fn new(span: Span, _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
+        #[cfg(feature = "code")]
+        let val = _lexer.span_str(span).to_string();
         let temp = get_new_temp();
-        let inst = IlocInst::LoadImed(InOut::new("loadI".to_string(), val, temp.clone()));
+        #[cfg(feature = "code")]
+        let code = {
+            let inst = IlocInst::LoadImed(InOut::new("loadI".to_string(), val, temp.clone()));
+            vec![inst]
+        };
         Self {
             span,
             next: Box::new(ASTNode::None),
-            code: vec![inst],
+            #[cfg(feature = "code")]
+            code,
             temp,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1271,6 +1361,7 @@ impl LitInt {
 pub struct LitFloat {
     pub span: Span,
     pub next: Box<ASTNode>,
+    #[cfg(feature = "code")]
     code: Vec<IlocInst>,
 }
 
@@ -1279,12 +1370,14 @@ impl LitFloat {
         Self {
             span,
             next: Box::new(ASTNode::None),
+            #[cfg(feature = "code")]
             code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1293,6 +1386,7 @@ impl LitFloat {
 pub struct LitChar {
     pub span: Span,
     pub next: Box<ASTNode>,
+    #[cfg(feature = "code")]
     code: Vec<IlocInst>,
 }
 
@@ -1301,12 +1395,14 @@ impl LitChar {
         Self {
             span,
             next: Box::new(ASTNode::None),
+            #[cfg(feature = "code")]
             code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1315,6 +1411,7 @@ impl LitChar {
 pub struct LitBool {
     pub span: Span,
     pub next: Box<ASTNode>,
+    #[cfg(feature = "code")]
     code: Vec<IlocInst>,
 }
 
@@ -1323,12 +1420,14 @@ impl LitBool {
         Self {
             span,
             next: Box::new(ASTNode::None),
+            #[cfg(feature = "code")]
             code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 }
@@ -1338,7 +1437,9 @@ pub struct Identifier {
     pub span: Span,
     pub next: Box<ASTNode>,
     ty: Type,
+    #[cfg(feature = "code")]
     code: Vec<IlocInst>,
+    #[cfg(feature = "code")]
     temp: String,
 }
 
@@ -1357,13 +1458,16 @@ impl Identifier {
             span,
             next: Box::new(ASTNode::None),
             ty,
+            #[cfg(feature = "code")]
             code: vec![],
+            #[cfg(feature = "code")]
             temp: "".to_string(),
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
         self.next = next.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
 
@@ -1371,16 +1475,19 @@ impl Identifier {
         &mut self,
         _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<(), ParsingError> {
-        let symbol = get_symbol(self.span, _lexer)?;
-        let desloc = symbol.desloc().to_string();
-        let reg = get_reg(&symbol);
-        self.temp = get_new_temp();
-        self.code = vec![IlocInst::LoadDesl(FullOp::new(
-            "loadAI".to_string(),
-            reg,
-            desloc,
-            self.temp.clone(),
-        ))];
+        #[cfg(feature = "code")]
+        {
+            let symbol = get_symbol(self.span, _lexer)?;
+            let desloc = symbol.desloc().to_string();
+            let reg = get_reg(&symbol);
+            self.temp = get_new_temp();
+            self.code = vec![IlocInst::LoadDesl(FullOp::new(
+                "loadAI".to_string(),
+                reg,
+                desloc,
+                self.temp.clone(),
+            ))];
+        };
         Ok(())
     }
 }
