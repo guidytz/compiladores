@@ -10,7 +10,7 @@ use crate::{
 
 #[cfg(feature = "code")]
 use crate::{
-    get_new_label, get_reg,
+    get_fn_label, get_new_label, get_reg,
     iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump},
 };
 
@@ -724,6 +724,39 @@ impl ASTNode {
             ASTNode::Identifier(node) => node.gen_load(lexer),
             _ => Ok(()),
         }
+    }
+
+    pub fn gen_init_code(&mut self) -> Result<(), ParsingError> {
+        #[cfg(feature = "code")]
+        {
+            let mut code = vec![];
+            let load_rfp = IlocInst::LoadImed(InOut::new(
+                "loadI".to_string(),
+                "1024".to_string(),
+                "rfp".to_string(),
+            ));
+            let load_rsp = IlocInst::LoadImed(InOut::new(
+                "loadI".to_string(),
+                "1024".to_string(),
+                "rsp".to_string(),
+            ));
+            let main_label = get_fn_label("main".to_string())?;
+            let jump_main = IlocInst::Jump(Jump::new("jumpI".to_string(), main_label));
+
+            code.push(load_rfp);
+            code.push(load_rsp);
+            code.push(jump_main);
+
+            match self {
+                ASTNode::FnDeclare(node) => {
+                    code.extend(node.code.clone());
+                    node.code = code;
+                    Ok(())
+                }
+                _ => Err(ParsingError::NotRootFunction),
+            }?;
+        }
+        Ok(())
     }
 }
 

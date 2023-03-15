@@ -4,7 +4,11 @@
 
 %%
 program -> Result<ASTNode, ParsingError>:
-        element_list { $1 } |
+        element_list {
+                let mut root = $1?;
+                root.gen_init_code()?;
+                Ok(root)
+        } |
         %empty { empty_node!() } ;
 
 element_list -> Result<ASTNode, ParsingError>:
@@ -87,10 +91,15 @@ fun_params -> Result<Option<Vec<SymbolEntry>>, ParsingError>:
         '(' begin_fn_scope param_list ')' {
                 let symbols = $3?;
                 let args_size = symbols.iter().map(|symbol| symbol.size()).reduce(|acc, size| acc + size).unwrap_or(0);
-                change_base_function_desloc(args_size);
+                let rfp_plus_rsp = 8;
+                change_base_function_desloc(args_size + rfp_plus_rsp);
                 Ok(Some(symbols))
         } |
-        '(' begin_fn_scope ')' { Ok(None) } ;
+        '(' begin_fn_scope ')' {
+                let rfp_plus_rsp = 8;
+                change_base_function_desloc(rfp_plus_rsp);
+                Ok(None)
+         } ;
 
 param_list -> Result<Vec<SymbolEntry>, ParsingError>:
         type ident ',' param_list {

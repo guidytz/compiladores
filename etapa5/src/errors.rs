@@ -43,6 +43,8 @@ pub enum ParsingError {
     CoerseUnknown(String),
     #[error("No scope defined")]
     NoScope,
+    #[error("Tree root is not a function")]
+    NotRootFunction,
 }
 
 impl ParsingError {

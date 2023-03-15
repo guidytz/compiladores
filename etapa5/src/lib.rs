@@ -77,3 +77,21 @@ pub fn change_base_function_desloc(_args_size: u32) {
     #[cfg(feature = "semantics")]
     SCOPE_STACK.with(|stack| stack.borrow_mut().change_base_function_desloc(_args_size))
 }
+
+pub fn get_fn_label(_name: String) -> Result<String, ParsingError> {
+    #[cfg(feature = "code")]
+    return SCOPE_STACK.with(|stack| {
+        let label = stack
+            .borrow()
+            .0
+            .first()
+            .ok_or(ParsingError::NoScope)?
+            .get(&_name)
+            .ok_or(ParsingError::ErrUndeclared(_name))?
+            .get_label();
+        Ok(label)
+    });
+
+    #[cfg(not(feature = "code"))]
+    Ok("".to_string())
+}
