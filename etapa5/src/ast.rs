@@ -486,6 +486,19 @@ impl ASTNode {
         }
     }
 
+    pub fn gen_self_code(
+        self,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        match self {
+            ASTNode::VarInit(mut node) => {
+                node.gen_self_code(lexer)?;
+                Ok(ASTNode::VarInit(node))
+            }
+            _ => Ok(self), // other nodes should already have generated code
+        }
+    }
+
     #[cfg(feature = "code")]
     pub fn code(&self) -> Vec<IlocInst> {
         match self {
@@ -670,8 +683,8 @@ impl ASTNode {
             ASTNode::CommReturn(_) => todo!(),
             ASTNode::CommIf(_) => todo!(),
             ASTNode::CommWhile(_) => todo!(),
-            ASTNode::ArrIdx(_) => todo!(),
-            ASTNode::ExprIdxNode(_) => todo!(),
+            ASTNode::ArrIdx(_) => "".to_string(),
+            ASTNode::ExprIdxNode(_) => "".to_string(),
             ASTNode::ExprOr(node) => node.temp.clone(),
             ASTNode::ExprAnd(node) => node.temp.clone(),
             ASTNode::ExprEq(node) => node.temp.clone(),
@@ -684,15 +697,22 @@ impl ASTNode {
             ASTNode::ExprSub(node) => node.temp.clone(),
             ASTNode::ExprMul(node) => node.temp.clone(),
             ASTNode::ExprDiv(node) => node.temp.clone(),
-            ASTNode::ExprMod(_) => todo!(),
-            ASTNode::ExprNeg(_) => todo!(),
-            ASTNode::ExprInv(_) => todo!(),
+            ASTNode::ExprMod(_) => "".to_string(),
+            ASTNode::ExprNeg(_) => "".to_string(),
+            ASTNode::ExprInv(_) => "".to_string(),
             ASTNode::LitInt(node) => node.temp.clone(),
-            ASTNode::LitFloat(_) => todo!(),
-            ASTNode::LitChar(_) => todo!(),
-            ASTNode::LitBool(_) => todo!(),
+            ASTNode::LitFloat(_) => "".to_string(),
+            ASTNode::LitChar(_) => "".to_string(),
+            ASTNode::LitBool(_) => "".to_string(),
             ASTNode::Identifier(node) => node.temp.clone(),
-            ASTNode::None => todo!(),
+            ASTNode::None => "".to_string(),
+        }
+    }
+
+    pub fn is_var_init(&self) -> bool {
+        match self {
+            ASTNode::VarInit(_) => true,
+            _ => false,
         }
     }
 
@@ -799,7 +819,39 @@ impl VarInit {
             let next = next.update_type(ty, lexer)?;
             node.next = Some(Box::new(next));
         }
+
         Ok(node)
+    }
+
+    pub fn gen_self_code(
+        &mut self,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<(), ParsingError> {
+        #[cfg(feature = "code")]
+        {
+            if let Some(next) = self.next.clone() {
+                let next = next.gen_self_code(lexer)?;
+                self.next = Some(Box::new(next));
+            }
+
+            let symbol = get_symbol(self.ident.span()?, lexer)?;
+
+            let reg = get_reg(&symbol);
+            let inst = IlocInst::StoreDesl(In2Out::new(
+                "storeAI".to_string(),
+                self.lit.temp(),
+                reg,
+                symbol.desloc().to_string(),
+            ));
+            let mut code = vec![];
+            code.extend(self.lit.code());
+            code.push(inst);
+            if let Some(next) = self.next.clone() {
+                code.extend(next.code());
+            }
+            self.code = code;
+        };
+        Ok(())
     }
 }
 
@@ -826,7 +878,7 @@ impl CommAttrib {
 
         #[cfg(feature = "code")]
         let code = {
-            let symbol = get_symbol(ident.span()?, lexer).expect("It was here");
+            let symbol = get_symbol(ident.span()?, lexer)?;
             let reg = get_reg(&symbol);
             let inst = IlocInst::StoreDesl(In2Out::new(
                 "storeAI".to_string(),

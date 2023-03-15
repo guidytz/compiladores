@@ -139,11 +139,11 @@ var_declare -> Result<ASTNode, ParsingError>:
         type var_list {
                 let aux = $2?;
                 let ty = $1?;
-                for var in aux.vars {
+                for var in aux.vars.into_iter().rev() {
                         let symbol = SymbolEntry::from_untyped_var(var, ty.clone());
                         add_symbol_to_curr_st(symbol)?;
                 }
-                let node = aux.node.update_type(ty, $lexer)?;
+                let node = aux.node.update_type(ty, $lexer)?.gen_self_code($lexer)?;
                 Ok(node)
         } ;
 
