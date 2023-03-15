@@ -85,7 +85,10 @@ function -> Result<ASTNode, ParsingError>:
 
 fun_params -> Result<Option<Vec<SymbolEntry>>, ParsingError>:
         '(' begin_fn_scope param_list ')' {
-                Ok(Some($3?))
+                let symbols = $3?;
+                let args_size = symbols.iter().map(|symbol| symbol.size()).reduce(|acc, size| acc + size).unwrap_or(0);
+                change_base_function_desloc(args_size);
+                Ok(Some(symbols))
         } |
         '(' begin_fn_scope ')' { Ok(None) } ;
 
@@ -492,6 +495,7 @@ use etapa5::{ast::{
         errors::ParsingError,
         add_symbol_to_curr_st,
         add_name_to_last_child_table,
+        change_base_function_desloc,
         new_scope,
         end_scope,
         get_new_label,

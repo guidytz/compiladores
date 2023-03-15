@@ -764,6 +764,7 @@ impl FnDeclare {
 
     pub fn add_next_fn(&mut self, next_fn: Box<ASTNode>) {
         self.next_fn = next_fn.clone();
+        #[cfg(feature = "code")]
         self.code.extend(next_fn.code());
     }
 }

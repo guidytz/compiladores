@@ -72,3 +72,8 @@ pub fn get_reg(symbol: &SymbolEntry) -> String {
         false => "rfp".to_string(),
     }
 }
+
+pub fn change_base_function_desloc(_args_size: u32) {
+    #[cfg(feature = "semantics")]
+    SCOPE_STACK.with(|stack| stack.borrow_mut().change_base_function_desloc(_args_size))
+}

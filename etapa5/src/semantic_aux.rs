@@ -151,7 +151,10 @@ impl SymbolEntry {
                 var.desloc = desloc;
                 true
             }
-            SymbolEntry::Arr(_arr) => false,
+            SymbolEntry::Arr(arr) => {
+                arr.common.desloc = desloc;
+                true
+            }
             _ => false,
         }
     }
@@ -175,6 +178,28 @@ impl SymbolEntry {
             symbol => {
                 panic!("Only functions symbols have labels. Trying to get label of: {symbol:#?}")
             }
+        }
+    }
+
+    pub fn size(&self) -> u32 {
+        match self {
+            SymbolEntry::LitInt(lit) => lit.size,
+            SymbolEntry::LitFloat(lit) => lit.size,
+            SymbolEntry::LitChar(lit) => lit.size,
+            SymbolEntry::LitBool(lit) => lit.size,
+            SymbolEntry::Var(var) => var.size,
+            SymbolEntry::Arr(arr) => arr.common.size,
+            SymbolEntry::Fn(fun) => fun.common.size,
+            SymbolEntry::None => 0,
+        }
+    }
+
+    pub fn update_desloc(&mut self, desloc: u32) {
+        match self {
+            SymbolEntry::Var(var) => {
+                var.desloc += desloc;
+            }
+            _ => (), // only simple vars can update deslocs inside functions
         }
     }
 }
@@ -348,7 +373,16 @@ impl SymbolTable {
     }
 
     pub fn change_base_desloc(&mut self, desloc: u32) {
-        self.desloc = desloc;
+        self.desloc += desloc;
+        self.table = self
+            .table
+            .clone()
+            .into_iter()
+            .map(|(key, mut symbol)| {
+                symbol.update_desloc(desloc);
+                (key, symbol)
+            })
+            .collect();
     }
 
     pub fn add_symbol(&mut self, key: String, mut symbol: SymbolEntry) -> Result<(), ParsingError> {
@@ -366,7 +400,7 @@ impl SymbolTable {
         }
 
         if symbol.add_desloc(self.desloc) {
-            self.desloc += symbol.get_type().get_size();
+            self.desloc += symbol.size();
         }
 
         self.table.insert(key, symbol);
@@ -514,6 +548,16 @@ impl ScopeStack {
             if let Some(mut child) = table.children.pop() {
                 child.add_name(name);
                 table.children.push(child);
+            }
+            self.0.push(table);
+        }
+    }
+
+    pub fn change_base_function_desloc(&mut self, args_size: u32) {
+        if let Some(mut table) = self.0.pop() {
+            match table.scope_type {
+                ScopeType::Fn => table.change_base_desloc(args_size),
+                _ => (), // do nothing if it's not a function
             }
             self.0.push(table);
         }
