@@ -825,16 +825,16 @@ impl VarInit {
 
     pub fn gen_self_code(
         &mut self,
-        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<(), ParsingError> {
         #[cfg(feature = "code")]
         {
             if let Some(next) = self.next.clone() {
-                let next = next.gen_self_code(lexer)?;
+                let next = next.gen_self_code(_lexer)?;
                 self.next = Some(Box::new(next));
             }
 
-            let symbol = get_symbol(self.ident.span()?, lexer)?;
+            let symbol = get_symbol(self.ident.span()?, _lexer)?;
 
             let reg = get_reg(&symbol);
             let inst = IlocInst::StoreDesl(In2Out::new(
