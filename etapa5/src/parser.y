@@ -74,10 +74,11 @@ function -> Result<ASTNode, ParsingError>:
                 let ty = $1?;
                 let name = $lexer.span_str(ident.span()?).to_string();
                 let args = $3?;
-                let entry = SymbolEntry::Fn(SymbolFn::new(name, ty, $span, $lexer, args));
+                let fn_label = get_new_label();
+                let entry = SymbolEntry::Fn(SymbolFn::new(name, ty, $span, $lexer, args, fn_label));
                 add_symbol_to_curr_st(entry)?;
                 let comm = Box::new($4?);
-                let node = FnDeclare::new($span, comm, ident.span()?);
+                let node = FnDeclare::new($span, comm, ident.span()?, $lexer)?;
                 Ok(ASTNode::FnDeclare(node))
         } ;
 
@@ -491,6 +492,7 @@ use etapa5::{ast::{
         add_symbol_to_curr_st,
         new_scope,
         end_scope,
+        get_new_label,
         semantic_aux::{int_from_span,
                        UntypedVar,
                        UntypedArr,

@@ -738,26 +738,33 @@ pub struct FnDeclare {
 }
 
 impl FnDeclare {
-    pub fn new(span: Span, comm: Box<ASTNode>, name: Span) -> Self {
+    pub fn new(
+        span: Span,
+        comm: Box<ASTNode>,
+        name: Span,
+        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
         #[cfg(feature = "code")]
         let code = {
-            let mut code = vec![];
+            let label = get_symbol(name, _lexer)?.get_label();
+            let mut code = vec![IlocInst::Nop(Some(label))];
             code.extend(comm.code());
             code
         };
 
-        Self {
+        Ok(Self {
             span,
             comm,
             next_fn: Box::new(ASTNode::None),
             name,
             #[cfg(feature = "code")]
             code,
-        }
+        })
     }
 
     pub fn add_next_fn(&mut self, next_fn: Box<ASTNode>) {
-        self.next_fn = next_fn;
+        self.next_fn = next_fn.clone();
+        self.code.extend(next_fn.code());
     }
 }
 

@@ -168,6 +168,15 @@ impl SymbolEntry {
             SymbolEntry::None => "".to_string(),
         }
     }
+
+    pub fn get_label(&self) -> String {
+        match self {
+            SymbolEntry::Fn(content) => content.label.clone(),
+            symbol => {
+                panic!("Only functions symbols have labels. Trying to get label of: {symbol:#?}")
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -257,6 +266,7 @@ impl SymbolArr {
 pub struct SymbolFn {
     pub common: CommonAttrs,
     pub args: Option<Vec<SymbolEntry>>,
+    pub label: String,
 }
 
 impl SymbolFn {
@@ -266,10 +276,15 @@ impl SymbolFn {
         span: Span,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
         args: Option<Vec<SymbolEntry>>,
+        label: String,
     ) -> Self {
         let mut common = CommonAttrs::new(name, ty, span, lexer);
         common.size = 0;
-        Self { common, args }
+        Self {
+            common,
+            args,
+            label,
+        }
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
