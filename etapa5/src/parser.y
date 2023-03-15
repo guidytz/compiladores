@@ -73,6 +73,7 @@ function -> Result<ASTNode, ParsingError>:
 
                 let ty = $1?;
                 let name = $lexer.span_str(ident.span()?).to_string();
+                add_name_to_last_child_table(name.clone());
                 let args = $3?;
                 let fn_label = get_new_label();
                 let entry = SymbolEntry::Fn(SymbolFn::new(name, ty, $span, $lexer, args, fn_label));
@@ -490,6 +491,7 @@ use etapa5::{ast::{
         Identifier},
         errors::ParsingError,
         add_symbol_to_curr_st,
+        add_name_to_last_child_table,
         new_scope,
         end_scope,
         get_new_label,

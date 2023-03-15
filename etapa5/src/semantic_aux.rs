@@ -332,6 +332,8 @@ pub struct SymbolTable {
     pub desloc: u32,
     pub table: HashMap<String, SymbolEntry>,
     pub scope_type: ScopeType,
+    pub children: Vec<Box<SymbolTable>>,
+    pub name: Option<String>,
 }
 
 impl SymbolTable {
@@ -340,6 +342,8 @@ impl SymbolTable {
             desloc: 0,
             table: HashMap::default(),
             scope_type,
+            children: vec![],
+            name: None,
         }
     }
 
@@ -370,8 +374,26 @@ impl SymbolTable {
         Ok(())
     }
 
+    pub fn add_child_table(&mut self, table: SymbolTable) {
+        self.children.push(Box::new(table));
+    }
+
     pub fn get(&self, key: &String) -> Option<&SymbolEntry> {
         self.table.get(key)
+    }
+
+    pub fn get_var_sizes(&self) -> u32 {
+        self.desloc
+            + self
+                .children
+                .iter()
+                .map(|table| table.desloc)
+                .reduce(|acc, desloc| acc.max(desloc))
+                .unwrap_or(0)
+    }
+
+    pub fn add_name(&mut self, name: String) {
+        self.name = Some(name);
     }
 }
 
@@ -413,7 +435,12 @@ impl ScopeStack {
     }
 
     pub fn pop_scope(&mut self) {
-        self.0.pop();
+        if let Some(table) = self.0.pop() {
+            if let Some(mut parent_table) = self.0.pop() {
+                parent_table.add_child_table(table);
+                self.0.push(parent_table);
+            }
+        }
     }
 
     pub fn add_symbol(&mut self, symbol: SymbolEntry) -> Result<(), ParsingError> {
@@ -480,6 +507,16 @@ impl ScopeStack {
             }
         }
         false
+    }
+
+    pub fn add_name_to_last_child_table(&mut self, name: String) {
+        if let Some(mut table) = self.0.pop() {
+            if let Some(mut child) = table.children.pop() {
+                child.add_name(name);
+                table.children.push(child);
+            }
+            self.0.push(table);
+        }
     }
 }
 

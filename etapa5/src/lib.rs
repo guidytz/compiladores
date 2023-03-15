@@ -21,6 +21,11 @@ pub fn add_symbol_to_curr_st(_symbol_entry: SymbolEntry) -> Result<(), ParsingEr
     Ok(())
 }
 
+pub fn add_name_to_last_child_table(_name: String) {
+    #[cfg(feature = "semantics")]
+    SCOPE_STACK.with(|stack| stack.borrow_mut().add_name_to_last_child_table(_name));
+}
+
 pub fn new_scope(_scope_type: ScopeType) {
     #[cfg(feature = "semantics")]
     SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope(_scope_type));
