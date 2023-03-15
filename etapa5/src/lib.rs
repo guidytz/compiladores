@@ -4,7 +4,7 @@ use cfgrammar::Span;
 use errors::ParsingError;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
-use semantic_aux::{check_global, ScopeStack, SymbolEntry};
+use semantic_aux::{check_global, ScopeStack, ScopeType, SymbolEntry};
 
 pub mod ast;
 pub mod errors;
@@ -21,9 +21,9 @@ pub fn add_symbol_to_curr_st(_symbol_entry: SymbolEntry) -> Result<(), ParsingEr
     Ok(())
 }
 
-pub fn new_scope() {
+pub fn new_scope(_scope_type: ScopeType) {
     #[cfg(feature = "semantics")]
-    SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope());
+    SCOPE_STACK.with(|stack| stack.borrow_mut().new_scope(_scope_type));
 }
 
 pub fn end_scope() {

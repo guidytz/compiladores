@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use etapa5::{clear_stack, new_scope};
+    use etapa5::{clear_stack, new_scope, semantic_aux::ScopeType};
     use lrlex::lrlex_mod;
     use lrpar::lrpar_mod;
 
@@ -33,7 +33,7 @@ mod test {
                     .expect("Could not parse integer from expected output");
 
                     clear_stack();
-                    new_scope();
+                    new_scope(ScopeType::Global);
 
                     let lexerdef = scanner_l::lexerdef();
                     let lexer = lexerdef.lexer(&input);
@@ -83,7 +83,7 @@ mod test {
                     .expect(format!("Couldn't read file {}", input_file_name).as_str());
 
                 clear_stack();
-                new_scope();
+                new_scope(ScopeType::Global);
 
                 let lexerdef = scanner_l::lexerdef();
                 let lexer = lexerdef.lexer(&input);

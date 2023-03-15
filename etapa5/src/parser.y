@@ -82,10 +82,10 @@ function -> Result<ASTNode, ParsingError>:
         } ;
 
 fun_params -> Result<Option<Vec<SymbolEntry>>, ParsingError>:
-        '(' begin_scope param_list ')' {
+        '(' begin_fn_scope param_list ')' {
                 Ok(Some($3?))
         } |
-        '(' begin_scope ')' { Ok(None) } ;
+        '(' begin_fn_scope ')' { Ok(None) } ;
 
 param_list -> Result<Vec<SymbolEntry>, ParsingError>:
         type ident ',' param_list {
@@ -110,7 +110,7 @@ fn_command_block -> Result<ASTNode, ParsingError>:
         '{' end_scope '}' { empty_node!() } ;
 
 command_block -> Result<ASTNode, ParsingError>:
-        '{' begin_scope commands end_scope '}' { $3 } |
+        '{' begin_inner_scope commands end_scope '}' { $3 } |
         '{' '}' { empty_node!() } ;
 
 commands -> Result<ASTNode, ParsingError>:
@@ -448,9 +448,15 @@ lit_int_val -> Result<u32, ParsingError>:
                 int_from_span($span, $lexer)
         } ;
 
-begin_scope -> Result<(), ParsingError>:
+begin_inner_scope -> Result<(), ParsingError>:
         %empty {
-                new_scope();
+                new_scope(ScopeType::Inner);
+                Ok(())
+        };
+
+begin_fn_scope -> Result<(), ParsingError>:
+        %empty {
+                new_scope(ScopeType::Fn);
                 Ok(())
         };
 
@@ -495,6 +501,7 @@ use etapa5::{ast::{
                        CommonAttrs,
                        LocalDeclrAux,
                        UsageType,
+                       ScopeType,
                        check_declaration}};
 
 macro_rules! empty_node {

@@ -305,18 +305,31 @@ impl Type {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum ScopeType {
+    Global,
+    Fn,
+    Inner,
+}
+
 #[derive(Debug)]
 pub struct SymbolTable {
     pub desloc: u32,
     pub table: HashMap<String, SymbolEntry>,
+    pub scope_type: ScopeType,
 }
 
 impl SymbolTable {
-    pub fn new() -> Self {
+    pub fn new(scope_type: ScopeType) -> Self {
         Self {
             desloc: 0,
             table: HashMap::default(),
+            scope_type,
         }
+    }
+
+    pub fn change_base_desloc(&mut self, desloc: u32) {
+        self.desloc = desloc;
     }
 
     pub fn add_symbol(&mut self, key: String, mut symbol: SymbolEntry) -> Result<(), ParsingError> {
@@ -375,8 +388,13 @@ impl ScopeStack {
         )))
     }
 
-    pub fn new_scope(&mut self) {
-        self.0.push(SymbolTable::new());
+    pub fn new_scope(&mut self, scope_type: ScopeType) {
+        let mut table = SymbolTable::new(scope_type.clone());
+        match scope_type {
+            ScopeType::Inner => table.change_base_desloc(self.0.last().unwrap().desloc),
+            _ => (),
+        }
+        self.0.push(table);
     }
 
     pub fn pop_scope(&mut self) {

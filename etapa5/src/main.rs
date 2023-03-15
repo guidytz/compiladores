@@ -8,8 +8,11 @@ use std::process::ExitCode;
 #[cfg(feature = "lexparser")]
 use std::io::{self, Write};
 
-#[cfg(feature = "lexparser")]
+#[cfg(feature = "semantics")]
 use etapa5::new_scope;
+
+#[cfg(feature = "semantics")]
+use etapa5::semantic_aux::ScopeType;
 
 use lrlex::lrlex_mod;
 #[cfg(feature = "lexparser")]
@@ -41,7 +44,8 @@ fn main() -> ExitCode {
         let lexerdef = scanner_l::lexerdef();
         let lexer = lexerdef.lexer(&input);
 
-        new_scope();
+        #[cfg(feature = "semantics")]
+        new_scope(ScopeType::Global);
 
         let (tree, errors) = parser_y::parse(&lexer);
         if !errors.is_empty() {
