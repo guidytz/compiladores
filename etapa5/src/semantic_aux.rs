@@ -469,12 +469,17 @@ impl ScopeStack {
     }
 
     pub fn is_global(&self, symbol: &SymbolEntry) -> bool {
-        let first = self.0.first().unwrap();
-        let global = first.get(&symbol.get_key());
-        match global {
-            Some(_) => true,
-            None => false,
+        for table in self.0.iter().rev() {
+            match table.get(&symbol.get_key()) {
+                Some(_) => match table.scope_type {
+                    ScopeType::Global => return true,
+                    ScopeType::Fn => return false,
+                    ScopeType::Inner => return false,
+                },
+                None => continue,
+            }
         }
+        false
     }
 }
 
