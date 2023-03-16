@@ -643,7 +643,7 @@ impl ASTNode {
                 let mut inst = code.pop();
                 inst = match inst {
                     Some(mut inst) => {
-                        inst.add_arithm_inst("mul".to_string());
+                        inst.add_arithm_inst("mult".to_string());
                         Some(inst)
                     }
                     None => unreachable!("There should be code in code list"),
