@@ -8,7 +8,6 @@ use lrpar::NonStreamingLexer;
 use crate::SCOPE_STACK;
 use crate::{ast::ASTNode, errors::ParsingError, get_symbol};
 
-#[cfg(feature = "code")]
 use crate::iloc_aux::RESERV_MEM;
 
 #[derive(Debug, Clone)]

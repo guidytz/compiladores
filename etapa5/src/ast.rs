@@ -5,14 +5,16 @@ use lrpar::NonStreamingLexer;
 use crate::{
     errors::ParsingError,
     get_new_temp, get_symbol,
-    iloc_aux::{save_rfp_rsp, RETVAL_ADDR},
     semantic_aux::{try_coersion, Type},
 };
 
 #[cfg(feature = "code")]
 use crate::{
     get_fn_label, get_fn_size, get_new_label, get_reg, get_var_deslocs,
-    iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump, RET_ADDR, RFP_ADDR, RSP_ADDR},
+    iloc_aux::{
+        save_rfp_rsp, CmpInst, FullOp, IlocInst, In2Out, InOut, Jump, RETVAL_ADDR, RET_ADDR,
+        RFP_ADDR, RSP_ADDR,
+    },
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -677,15 +679,7 @@ impl ASTNode {
     #[cfg(feature = "code")]
     pub fn temp(&self) -> String {
         match self {
-            ASTNode::FnDeclare(_) => todo!(),
-            ASTNode::VarInit(_) => todo!(),
-            ASTNode::CommAttrib(_) => todo!(),
-            ASTNode::CommFnCall(_) => todo!(),
-            ASTNode::CommReturn(_) => todo!(),
-            ASTNode::CommIf(_) => todo!(),
-            ASTNode::CommWhile(_) => todo!(),
-            ASTNode::ArrIdx(_) => "".to_string(),
-            ASTNode::ExprIdxNode(_) => "".to_string(),
+            ASTNode::CommFnCall(node) => node.temp.clone(),
             ASTNode::ExprOr(node) => node.temp.clone(),
             ASTNode::ExprAnd(node) => node.temp.clone(),
             ASTNode::ExprEq(node) => node.temp.clone(),
@@ -698,15 +692,23 @@ impl ASTNode {
             ASTNode::ExprSub(node) => node.temp.clone(),
             ASTNode::ExprMul(node) => node.temp.clone(),
             ASTNode::ExprDiv(node) => node.temp.clone(),
-            ASTNode::ExprMod(_) => "".to_string(),
-            ASTNode::ExprNeg(_) => "".to_string(),
-            ASTNode::ExprInv(_) => "".to_string(),
             ASTNode::LitInt(node) => node.temp.clone(),
-            ASTNode::LitFloat(_) => "".to_string(),
-            ASTNode::LitChar(_) => "".to_string(),
-            ASTNode::LitBool(_) => "".to_string(),
             ASTNode::Identifier(node) => node.temp.clone(),
-            ASTNode::None => "".to_string(),
+            ASTNode::FnDeclare(_) => unimplemented!("temp not implemented!"),
+            ASTNode::VarInit(_) => unimplemented!("temp not implemented!"),
+            ASTNode::CommAttrib(_) => unimplemented!("temp not implemented!"),
+            ASTNode::ArrIdx(_) => unimplemented!("temp not implemented!"),
+            ASTNode::ExprIdxNode(_) => unimplemented!("temp not implemented!"),
+            ASTNode::CommReturn(_) => unimplemented!("temp not implemented!"),
+            ASTNode::CommIf(_) => unimplemented!("temp not implemented!"),
+            ASTNode::CommWhile(_) => unimplemented!("temp not implemented!"),
+            ASTNode::ExprMod(_) => unimplemented!("temp not implemented!"),
+            ASTNode::ExprNeg(_) => unimplemented!("temp not implemented!"),
+            ASTNode::ExprInv(_) => unimplemented!("temp not implemented!"),
+            ASTNode::LitFloat(_) => unimplemented!("temp not implemented!"),
+            ASTNode::LitChar(_) => unimplemented!("temp not implemented!"),
+            ASTNode::LitBool(_) => unimplemented!("temp not implemented!"),
+            ASTNode::None => unimplemented!("temp not implemented!"),
         }
     }
 
@@ -1044,6 +1046,8 @@ pub struct CommFnCall {
     pub ty: Type,
     #[cfg(feature = "code")]
     pub code: Vec<IlocInst>,
+    #[cfg(feature = "code")]
+    pub temp: String,
 }
 
 impl CommFnCall {
@@ -1054,6 +1058,10 @@ impl CommFnCall {
         _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let ty = ident.get_type();
+
+        #[cfg(feature = "code")]
+        let temp = get_new_temp();
+
         #[cfg(feature = "code")]
         let code = {
             let mut code = vec![];
@@ -1101,6 +1109,14 @@ impl CommFnCall {
             code.push(ret_addr_save);
             code.push(jump_fn);
 
+            let retrieve_ret_val = IlocInst::LoadDesl(FullOp::new(
+                "loadAI".to_string(),
+                "rsp".to_string(),
+                RETVAL_ADDR.to_string(),
+                temp.clone(),
+            ));
+            code.push(retrieve_ret_val);
+
             code
         };
         Ok(Self {
@@ -1111,6 +1127,8 @@ impl CommFnCall {
             ty,
             #[cfg(feature = "code")]
             code,
+            #[cfg(feature = "code")]
+            temp,
         })
     }
 
