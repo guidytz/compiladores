@@ -10,6 +10,7 @@ pub enum IlocInst {
     Cbr(In2Out),
     Jump(Jump),
     Nop(Option<String>),
+    Halt,
     Empty,
 }
 
@@ -38,6 +39,7 @@ impl IlocInst {
                 }
                 println!("nop");
             }
+            IlocInst::Halt => println!("halt"),
             IlocInst::Empty => (),
         }
     }
@@ -81,6 +83,7 @@ impl IlocInst {
                 IlocInst::Jump(inst)
             }
             IlocInst::Nop(_) => IlocInst::Nop(Some(label)),
+            IlocInst::Halt => IlocInst::Halt,
             IlocInst::Empty => IlocInst::Empty,
         }
     }

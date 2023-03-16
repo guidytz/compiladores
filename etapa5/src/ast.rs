@@ -10,8 +10,9 @@ use crate::{
 
 #[cfg(feature = "code")]
 use crate::{
-    get_fn_label, get_new_label, get_reg,
+    get_fn_label, get_fn_size, get_new_label, get_reg,
     iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump},
+    RET_ADDR,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -740,12 +741,28 @@ impl ASTNode {
                 "1024".to_string(),
                 "rsp".to_string(),
             ));
+            let temp_rpc = get_new_temp();
+            let load_rpc = IlocInst::Arithm(FullOp::new(
+                "addI".to_string(),
+                "rpc".to_string(),
+                "3".to_string(),
+                temp_rpc.clone(),
+            ));
+            let ret_addr_save = IlocInst::StoreDesl(In2Out::new(
+                "storeAI".to_string(),
+                temp_rpc,
+                "rsp".to_string(),
+                RET_ADDR.to_string(),
+            ));
             let main_label = get_fn_label("main".to_string())?;
             let jump_main = IlocInst::Jump(Jump::new("jumpI".to_string(), main_label));
 
             code.push(load_rfp);
             code.push(load_rsp);
+            code.push(load_rpc);
+            code.push(ret_addr_save);
             code.push(jump_main);
+            code.push(IlocInst::Halt);
 
             match self {
                 ASTNode::FnDeclare(node) => {
@@ -779,9 +796,37 @@ impl FnDeclare {
     ) -> Result<Self, ParsingError> {
         #[cfg(feature = "code")]
         let code = {
-            let label = get_symbol(name, _lexer)?.get_label();
+            let symbol = get_symbol(name, _lexer)?;
+            let label = symbol.get_label();
+            let fun_size = get_fn_size(symbol.get_key())?;
+
             let mut code = vec![IlocInst::Nop(Some(label))];
+            let update_rfp = IlocInst::LoadImed(InOut::new(
+                "i2i".to_string(),
+                "rsp".to_string(),
+                "rfp".to_string(),
+            ));
+            let update_rsp = IlocInst::Arithm(FullOp::new(
+                "addI".to_string(),
+                "rsp".to_string(),
+                fun_size.to_string(),
+                "rsp".to_string(),
+            ));
+            code.push(update_rfp);
+            code.push(update_rsp);
+
             code.extend(comm.code());
+
+            let ret_addr_temp = get_new_temp();
+            let load_ret_addr = IlocInst::LoadDesl(FullOp::new(
+                "loadAI".to_string(),
+                "rfp".to_string(),
+                RET_ADDR.to_string(),
+                ret_addr_temp.clone(),
+            ));
+            let return_to_caller = IlocInst::Jump(Jump::new("jump".to_string(), ret_addr_temp));
+            code.push(load_ret_addr);
+            code.push(return_to_caller);
             code
         };
 

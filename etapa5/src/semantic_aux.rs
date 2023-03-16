@@ -183,13 +183,13 @@ impl SymbolEntry {
 
     pub fn size(&self) -> u32 {
         match self {
-            SymbolEntry::LitInt(lit) => lit.size,
-            SymbolEntry::LitFloat(lit) => lit.size,
-            SymbolEntry::LitChar(lit) => lit.size,
-            SymbolEntry::LitBool(lit) => lit.size,
+            SymbolEntry::LitInt(_) => 0,
+            SymbolEntry::LitFloat(_) => 0,
+            SymbolEntry::LitChar(_) => 0,
+            SymbolEntry::LitBool(_) => 0,
             SymbolEntry::Var(var) => var.size,
             SymbolEntry::Arr(arr) => arr.common.size,
-            SymbolEntry::Fn(fun) => fun.common.size,
+            SymbolEntry::Fn(_) => 0,
             SymbolEntry::None => 0,
         }
     }
@@ -429,6 +429,23 @@ impl SymbolTable {
     pub fn add_name(&mut self, name: String) {
         self.name = Some(name);
     }
+
+    pub fn get_size(&self) -> u32 {
+        let mut size = self
+            .table
+            .iter()
+            .map(|(_, symbol)| symbol.size())
+            .reduce(|acc, size| acc + size)
+            .unwrap_or(0);
+        size += self
+            .children
+            .iter()
+            .map(|table| table.get_size())
+            .reduce(|acc, size| acc + size)
+            .unwrap_or(0);
+
+        size
+    }
 }
 
 #[derive(Debug)]
@@ -561,6 +578,17 @@ impl ScopeStack {
             }
             self.0.push(table);
         }
+    }
+
+    pub fn get_fn_size(&self, name: String) -> Result<u32, ParsingError> {
+        let global_table = self.0.first().ok_or(ParsingError::NoScope)?;
+        let fun_table = global_table
+            .children
+            .iter()
+            .filter(|table| table.name == Some(name.clone()))
+            .collect::<Vec<_>>();
+        let fun_table = fun_table.first().ok_or(ParsingError::ErrUndeclared(name))?;
+        Ok(fun_table.get_size())
     }
 }
 

@@ -15,6 +15,11 @@ thread_local!(pub static SCOPE_STACK: RefCell<ScopeStack> = RefCell::new(ScopeSt
 thread_local!(pub static TEMP_COUNTER: RefCell<u32> = RefCell::new(0));
 thread_local!(pub static LABEL_COUNTER: RefCell<u32> = RefCell::new(0));
 
+pub static RFP_ADDR: u32 = 0;
+pub static RSP_ADDR: u32 = 4;
+pub static RET_ADDR: u32 = 8;
+pub static ADDR_SIZE: u32 = 4;
+
 pub fn add_symbol_to_curr_st(_symbol_entry: SymbolEntry) -> Result<(), ParsingError> {
     #[cfg(feature = "semantics")]
     SCOPE_STACK.with(|stack| stack.borrow_mut().add_symbol(_symbol_entry))?;
@@ -94,4 +99,12 @@ pub fn get_fn_label(_name: String) -> Result<String, ParsingError> {
 
     #[cfg(not(feature = "code"))]
     Ok("".to_string())
+}
+
+pub fn get_fn_size(_name: String) -> Result<u32, ParsingError> {
+    #[cfg(feature = "code")]
+    return SCOPE_STACK.with(|stack| stack.borrow_mut().get_fn_size(_name));
+
+    #[cfg(not(feature = "code"))]
+    Ok(0)
 }

@@ -91,13 +91,13 @@ fun_params -> Result<Option<Vec<SymbolEntry>>, ParsingError>:
         '(' begin_fn_scope param_list ')' {
                 let symbols = $3?;
                 let args_size = symbols.iter().map(|symbol| symbol.size()).reduce(|acc, size| acc + size).unwrap_or(0);
-                let rfp_plus_rsp = 8;
-                change_base_function_desloc(args_size + rfp_plus_rsp);
+                let rfp_rsp_ret_addr = ADDR_SIZE * 3;
+                change_base_function_desloc(args_size + rfp_rsp_ret_addr);
                 Ok(Some(symbols))
         } |
         '(' begin_fn_scope ')' {
-                let rfp_plus_rsp = 8;
-                change_base_function_desloc(rfp_plus_rsp);
+                let rfp_rsp_ret_addr = ADDR_SIZE * 3;
+                change_base_function_desloc(rfp_rsp_ret_addr);
                 Ok(None)
          } ;
 
@@ -508,6 +508,7 @@ use etapa5::{ast::{
         new_scope,
         end_scope,
         get_new_label,
+        ADDR_SIZE,
         semantic_aux::{int_from_span,
                        UntypedVar,
                        UntypedArr,
