@@ -5,7 +5,7 @@ use lrpar::NonStreamingLexer;
 use crate::{
     errors::ParsingError,
     get_new_temp, get_symbol,
-    iloc_aux::save_rfp_rsp,
+    iloc_aux::{save_rfp_rsp, RETVAL_ADDR},
     semantic_aux::{try_coersion, Type},
 };
 
@@ -1138,6 +1138,14 @@ impl CommReturn {
         let code = {
             let mut code = vec![];
             code.extend(expr.code());
+            let exp_temp = expr.temp();
+            let save_ret_value = IlocInst::StoreDesl(In2Out::new(
+                "storeAI".to_string(),
+                exp_temp,
+                "rfp".to_string(),
+                RETVAL_ADDR.to_string(),
+            ));
+            code.push(save_ret_value);
             code
         };
         Self {

@@ -14,11 +14,12 @@ pub enum IlocInst {
     Empty,
 }
 
-pub static RFP_ADDR: u32 = 0;
-pub static RSP_ADDR: u32 = 4;
-pub static RET_ADDR: u32 = 8;
+pub static RETVAL_ADDR: u32 = 0;
+pub static RFP_ADDR: u32 = 4;
+pub static RSP_ADDR: u32 = 8;
+pub static RET_ADDR: u32 = 12;
 pub static ADDR_SIZE: u32 = 4;
-pub static RESERV_MEM: u32 = ADDR_SIZE * 3;
+pub static RESERV_MEM: u32 = ADDR_SIZE * 4;
 
 impl IlocInst {
     pub fn add_arithm_inst(&mut self, name: String) {
