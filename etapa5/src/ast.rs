@@ -843,31 +843,7 @@ impl FnDeclare {
 
             code.extend(comm.code());
 
-            let restore_rsp = IlocInst::LoadDesl(FullOp::new(
-                "loadAI".to_string(),
-                "rfp".to_string(),
-                RSP_ADDR.to_string(),
-                "rsp".to_string(),
-            ));
-            let restore_rfp = IlocInst::LoadDesl(FullOp::new(
-                "loadAI".to_string(),
-                "rfp".to_string(),
-                RFP_ADDR.to_string(),
-                "rfp".to_string(),
-            ));
-
-            let ret_addr_temp = get_new_temp();
-            let load_ret_addr = IlocInst::LoadDesl(FullOp::new(
-                "loadAI".to_string(),
-                "rfp".to_string(),
-                RET_ADDR.to_string(),
-                ret_addr_temp.clone(),
-            ));
-            let return_to_caller = IlocInst::Jump(Jump::new("jump".to_string(), ret_addr_temp));
-            code.push(load_ret_addr);
-            code.push(restore_rsp);
-            code.push(restore_rfp);
-            code.push(return_to_caller);
+            code.extend(return_to_caller_insts());
             code
         };
 
@@ -1164,6 +1140,7 @@ impl CommReturn {
                 RETVAL_ADDR.to_string(),
             ));
             code.push(save_ret_value);
+            code.extend(return_to_caller_insts());
             code
         };
         Self {
@@ -1769,4 +1746,35 @@ impl Identifier {
         temps.extend(self.next.get_temps());
         temps
     }
+}
+
+#[cfg(feature = "code")]
+fn return_to_caller_insts() -> Vec<IlocInst> {
+    let mut code = vec![];
+    let restore_rsp = IlocInst::LoadDesl(FullOp::new(
+        "loadAI".to_string(),
+        "rfp".to_string(),
+        RSP_ADDR.to_string(),
+        "rsp".to_string(),
+    ));
+    let restore_rfp = IlocInst::LoadDesl(FullOp::new(
+        "loadAI".to_string(),
+        "rfp".to_string(),
+        RFP_ADDR.to_string(),
+        "rfp".to_string(),
+    ));
+
+    let ret_addr_temp = get_new_temp();
+    let load_ret_addr = IlocInst::LoadDesl(FullOp::new(
+        "loadAI".to_string(),
+        "rfp".to_string(),
+        RET_ADDR.to_string(),
+        ret_addr_temp.clone(),
+    ));
+    let return_to_caller = IlocInst::Jump(Jump::new("jump".to_string(), ret_addr_temp));
+    code.push(load_ret_addr);
+    code.push(restore_rsp);
+    code.push(restore_rfp);
+    code.push(return_to_caller);
+    code
 }
