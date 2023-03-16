@@ -6,7 +6,7 @@ use lrpar::NonStreamingLexer;
 
 #[cfg(feature = "semantics")]
 use crate::SCOPE_STACK;
-use crate::{ast::ASTNode, errors::ParsingError, get_symbol};
+use crate::{ast::ASTNode, errors::ParsingError, get_symbol, ADDR_SIZE};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -437,14 +437,15 @@ impl SymbolTable {
             .map(|(_, symbol)| symbol.size())
             .reduce(|acc, size| acc + size)
             .unwrap_or(0);
-        size += self
-            .children
-            .iter()
-            .map(|table| table.get_size())
-            .reduce(|acc, size| acc + size)
-            .unwrap_or(0);
+        size = size.max(
+            self.children
+                .iter()
+                .map(|table| table.get_size())
+                .reduce(|acc, size| acc.max(size))
+                .unwrap_or(0),
+        );
 
-        size
+        size + (ADDR_SIZE * 3)
     }
 }
 
@@ -589,6 +590,37 @@ impl ScopeStack {
             .collect::<Vec<_>>();
         let fun_table = fun_table.first().ok_or(ParsingError::ErrUndeclared(name))?;
         Ok(fun_table.get_size())
+    }
+
+    pub fn get_var_deslocs(&self, fn_name: String) -> Result<Vec<(String, u32)>, ParsingError> {
+        let mut deslocs = vec![];
+        if let Some(global_table) = self.0.first() {
+            let fn_symbol = global_table
+                .get(&fn_name)
+                .ok_or(ParsingError::ErrUndeclared(fn_name.clone()))?;
+
+            if let Some(args) = match fn_symbol {
+                SymbolEntry::Fn(symbol) => symbol.args.clone(),
+                _ => panic!("OH NO"),
+            } {
+                let fun_table = global_table
+                    .children
+                    .iter()
+                    .filter(|table| table.name == Some(fn_name.clone()))
+                    .collect::<Vec<_>>();
+                let fun_table = fun_table
+                    .first()
+                    .ok_or(ParsingError::ErrUndeclared(fn_name))?;
+
+                args.iter().for_each(|arg| {
+                    let key = arg.get_key();
+                    let symbol = fun_table.get(&key).unwrap();
+                    deslocs.push((key, symbol.desloc()));
+                });
+            }
+        }
+
+        Ok(deslocs)
     }
 }
 

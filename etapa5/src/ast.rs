@@ -6,11 +6,12 @@ use crate::{
     errors::ParsingError,
     get_new_temp, get_symbol,
     semantic_aux::{try_coersion, Type},
+    RFP_ADDR, RSP_ADDR,
 };
 
 #[cfg(feature = "code")]
 use crate::{
-    get_fn_label, get_fn_size, get_new_label, get_reg,
+    get_fn_label, get_fn_size, get_new_label, get_reg, get_var_deslocs,
     iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump},
     RET_ADDR,
 };
@@ -775,6 +776,28 @@ impl ASTNode {
         }
         Ok(())
     }
+
+    #[cfg(feature = "code")]
+    pub fn get_temps(&self) -> Vec<String> {
+        match self {
+            ASTNode::ExprEq(expr) => expr.get_temps(),
+            ASTNode::ExprNeq(expr) => expr.get_temps(),
+            ASTNode::ExprLt(expr) => expr.get_temps(),
+            ASTNode::ExprGt(expr) => expr.get_temps(),
+            ASTNode::ExprLe(expr) => expr.get_temps(),
+            ASTNode::ExprGe(expr) => expr.get_temps(),
+            ASTNode::ExprOr(expr) => expr.get_temps(),
+            ASTNode::ExprAnd(expr) => expr.get_temps(),
+            ASTNode::ExprAdd(expr) => expr.get_temps(),
+            ASTNode::ExprSub(expr) => expr.get_temps(),
+            ASTNode::ExprMul(expr) => expr.get_temps(),
+            ASTNode::ExprDiv(expr) => expr.get_temps(),
+            ASTNode::ExprMod(expr) => expr.get_temps(),
+            ASTNode::LitInt(expr) => expr.get_temps(),
+            ASTNode::Identifier(expr) => expr.get_temps(),
+            _ => vec![],
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -816,6 +839,21 @@ impl FnDeclare {
             code.push(update_rsp);
 
             code.extend(comm.code());
+
+            let restore_rsp = IlocInst::LoadDesl(FullOp::new(
+                "loadAI".to_string(),
+                "rfp".to_string(),
+                RSP_ADDR.to_string(),
+                "rsp".to_string(),
+            ));
+            let restore_rfp = IlocInst::LoadDesl(FullOp::new(
+                "loadAI".to_string(),
+                "rfp".to_string(),
+                RFP_ADDR.to_string(),
+                "rfp".to_string(),
+            ));
+            code.push(restore_rsp);
+            code.push(restore_rfp);
 
             let ret_addr_temp = get_new_temp();
             let load_ret_addr = IlocInst::LoadDesl(FullOp::new(
@@ -1008,15 +1046,62 @@ pub struct CommFnCall {
 }
 
 impl CommFnCall {
-    pub fn new(span: Span, expr: Box<ASTNode>, ident: Box<ASTNode>) -> Self {
+    pub fn new(
+        span: Span,
+        expr: Box<ASTNode>,
+        ident: Box<ASTNode>,
+        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
         let ty = ident.get_type();
         #[cfg(feature = "code")]
         let code = {
             let mut code = vec![];
+            let temps = expr.get_temps();
+            let name = _lexer.span_str(ident.span()?).to_string();
+            let mut deslocs = get_var_deslocs(name.clone())?;
+            deslocs.sort_by_key(|vals| vals.1);
+
             code.extend(expr.code());
+            temps
+                .into_iter()
+                .rev()
+                .zip(deslocs)
+                .for_each(|(temp, (_key, desloc))| {
+                    #[cfg(feature = "debug")]
+                    println!("{temp} -> {_key}: {desloc}");
+
+                    let load_temp_to_param = IlocInst::StoreDesl(In2Out::new(
+                        "storeAI".to_string(),
+                        temp,
+                        "rsp".to_string(),
+                        desloc.to_string(),
+                    ));
+                    code.push(load_temp_to_param);
+                });
+
+            let temp_rpc = get_new_temp();
+            let load_rpc = IlocInst::Arithm(FullOp::new(
+                "addI".to_string(),
+                "rpc".to_string(),
+                "3".to_string(),
+                temp_rpc.clone(),
+            ));
+            let ret_addr_save = IlocInst::StoreDesl(In2Out::new(
+                "storeAI".to_string(),
+                temp_rpc,
+                "rsp".to_string(),
+                RET_ADDR.to_string(),
+            ));
+            let fn_label = get_fn_label(name)?;
+            let jump_fn = IlocInst::Jump(Jump::new("jumpI".to_string(), fn_label));
+
+            code.push(load_rpc);
+            code.push(ret_addr_save);
+            code.push(jump_fn);
+
             code
         };
-        Self {
+        Ok(Self {
             span,
             expr,
             name: ident,
@@ -1024,7 +1109,7 @@ impl CommFnCall {
             ty,
             #[cfg(feature = "code")]
             code,
-        }
+        })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
@@ -1333,6 +1418,13 @@ impl BinOp {
         #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
+
+    #[cfg(feature = "code")]
+    pub fn get_temps(&self) -> Vec<String> {
+        let mut temps = vec![self.temp.clone()];
+        temps.extend(self.next.get_temps());
+        temps
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -1428,6 +1520,13 @@ impl CmpOp {
         #[cfg(feature = "code")]
         self.code.extend(next.code());
     }
+
+    #[cfg(feature = "code")]
+    pub fn get_temps(&self) -> Vec<String> {
+        let mut temps = vec![self.temp.clone()];
+        temps.extend(self.next.get_temps());
+        temps
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -1492,6 +1591,13 @@ impl LitInt {
         self.next = next.clone();
         #[cfg(feature = "code")]
         self.code.extend(next.code());
+    }
+
+    #[cfg(feature = "code")]
+    pub fn get_temps(&self) -> Vec<String> {
+        let mut temps = vec![self.temp.clone()];
+        temps.extend(self.next.get_temps());
+        temps
     }
 }
 
@@ -1627,5 +1733,12 @@ impl Identifier {
             ))];
         };
         Ok(())
+    }
+
+    #[cfg(feature = "code")]
+    pub fn get_temps(&self) -> Vec<String> {
+        let mut temps = vec![self.temp.clone()];
+        temps.extend(self.next.get_temps());
+        temps
     }
 }

@@ -90,9 +90,9 @@ function -> Result<ASTNode, ParsingError>:
 fun_params -> Result<Option<Vec<SymbolEntry>>, ParsingError>:
         '(' begin_fn_scope param_list ')' {
                 let symbols = $3?;
-                let args_size = symbols.iter().map(|symbol| symbol.size()).reduce(|acc, size| acc + size).unwrap_or(0);
+                // let args_size = symbols.iter().map(|symbol| symbol.size()).reduce(|acc, size| acc + size).unwrap_or(0);
                 let rfp_rsp_ret_addr = ADDR_SIZE * 3;
-                change_base_function_desloc(args_size + rfp_rsp_ret_addr);
+                change_base_function_desloc(rfp_rsp_ret_addr);
                 Ok(Some(symbols))
         } |
         '(' begin_fn_scope ')' {
@@ -213,13 +213,13 @@ fun_call -> Result<ASTNode, ParsingError>:
                 let expr = Box::new($3?);
                 let ident = $1?;
                 check_declaration(&ident, $lexer, UsageType::FnCall)?;
-                let node = CommFnCall::new($span, expr, Box::new(ident));
+                let node = CommFnCall::new($span, expr, Box::new(ident), $lexer)?;
                 Ok(ASTNode::CommFnCall(node))
         } |
         ident '(' ')'  {
                 let ident = $1?;
                 check_declaration(&ident, $lexer, UsageType::FnCall)?;
-                let node = CommFnCall::new($span, Box::new(ASTNode::None), Box::new(ident));
+                let node = CommFnCall::new($span, Box::new(ASTNode::None), Box::new(ident), $lexer)?;
                 Ok(ASTNode::CommFnCall(node))
         } ;
 

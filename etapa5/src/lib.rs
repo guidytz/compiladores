@@ -108,3 +108,11 @@ pub fn get_fn_size(_name: String) -> Result<u32, ParsingError> {
     #[cfg(not(feature = "code"))]
     Ok(0)
 }
+
+pub fn get_var_deslocs(_name: String) -> Result<Vec<(String, u32)>, ParsingError> {
+    #[cfg(feature = "code")]
+    return SCOPE_STACK.with(|stack| stack.borrow_mut().get_var_deslocs(_name));
+
+    #[cfg(not(feature = "code"))]
+    Ok(Vec::new())
+}
