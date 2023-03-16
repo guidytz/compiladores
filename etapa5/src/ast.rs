@@ -5,15 +5,14 @@ use lrpar::NonStreamingLexer;
 use crate::{
     errors::ParsingError,
     get_new_temp, get_symbol,
+    iloc_aux::save_rfp_rsp,
     semantic_aux::{try_coersion, Type},
-    RFP_ADDR, RSP_ADDR,
 };
 
 #[cfg(feature = "code")]
 use crate::{
     get_fn_label, get_fn_size, get_new_label, get_reg, get_var_deslocs,
-    iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump},
-    RET_ADDR,
+    iloc_aux::{CmpInst, FullOp, IlocInst, In2Out, InOut, Jump, RET_ADDR, RFP_ADDR, RSP_ADDR},
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -742,6 +741,7 @@ impl ASTNode {
                 "1024".to_string(),
                 "rsp".to_string(),
             ));
+
             let temp_rpc = get_new_temp();
             let load_rpc = IlocInst::Arithm(FullOp::new(
                 "addI".to_string(),
@@ -760,6 +760,7 @@ impl ASTNode {
 
             code.push(load_rfp);
             code.push(load_rsp);
+            code.extend(save_rfp_rsp());
             code.push(load_rpc);
             code.push(ret_addr_save);
             code.push(jump_main);
@@ -852,8 +853,6 @@ impl FnDeclare {
                 RFP_ADDR.to_string(),
                 "rfp".to_string(),
             ));
-            code.push(restore_rsp);
-            code.push(restore_rfp);
 
             let ret_addr_temp = get_new_temp();
             let load_ret_addr = IlocInst::LoadDesl(FullOp::new(
@@ -864,6 +863,8 @@ impl FnDeclare {
             ));
             let return_to_caller = IlocInst::Jump(Jump::new("jump".to_string(), ret_addr_temp));
             code.push(load_ret_addr);
+            code.push(restore_rsp);
+            code.push(restore_rfp);
             code.push(return_to_caller);
             code
         };
@@ -1083,7 +1084,7 @@ impl CommFnCall {
             let load_rpc = IlocInst::Arithm(FullOp::new(
                 "addI".to_string(),
                 "rpc".to_string(),
-                "3".to_string(),
+                3.to_string(),
                 temp_rpc.clone(),
             ));
             let ret_addr_save = IlocInst::StoreDesl(In2Out::new(
@@ -1095,6 +1096,7 @@ impl CommFnCall {
             let fn_label = get_fn_label(name)?;
             let jump_fn = IlocInst::Jump(Jump::new("jumpI".to_string(), fn_label));
 
+            code.extend(save_rfp_rsp());
             code.push(load_rpc);
             code.push(ret_addr_save);
             code.push(jump_fn);

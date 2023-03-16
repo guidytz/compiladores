@@ -14,6 +14,12 @@ pub enum IlocInst {
     Empty,
 }
 
+pub static RFP_ADDR: u32 = 0;
+pub static RSP_ADDR: u32 = 4;
+pub static RET_ADDR: u32 = 8;
+pub static ADDR_SIZE: u32 = 4;
+pub static RESERV_MEM: u32 = ADDR_SIZE * 3;
+
 impl IlocInst {
     pub fn add_arithm_inst(&mut self, name: String) {
         match self {
@@ -241,4 +247,22 @@ impl Jump {
     pub fn add_label(&mut self, label: String) {
         self.label = Some(label);
     }
+}
+
+pub fn save_rfp_rsp() -> Vec<IlocInst> {
+    let save_rfp = IlocInst::StoreDesl(In2Out::new(
+        "storeAI".to_string(),
+        "rfp".to_string(),
+        "rsp".to_string(),
+        RFP_ADDR.to_string(),
+    ));
+
+    let save_rsp = IlocInst::StoreDesl(In2Out::new(
+        "storeAI".to_string(),
+        "rsp".to_string(),
+        "rsp".to_string(),
+        RSP_ADDR.to_string(),
+    ));
+
+    vec![save_rfp, save_rsp]
 }

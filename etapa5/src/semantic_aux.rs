@@ -6,7 +6,10 @@ use lrpar::NonStreamingLexer;
 
 #[cfg(feature = "semantics")]
 use crate::SCOPE_STACK;
-use crate::{ast::ASTNode, errors::ParsingError, get_symbol, ADDR_SIZE};
+use crate::{ast::ASTNode, errors::ParsingError, get_symbol};
+
+#[cfg(feature = "code")]
+use crate::iloc_aux::RESERV_MEM;
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -445,7 +448,7 @@ impl SymbolTable {
                 .unwrap_or(0),
         );
 
-        size + (ADDR_SIZE * 3)
+        size + RESERV_MEM
     }
 }
 
