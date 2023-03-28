@@ -520,7 +520,9 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     IlocInst::Cmp(mut inst) => {
-                        inst.name = "cmp_EQ".to_string();
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_EQ".to_string();
+                        }
                         IlocInst::Cmp(inst)
                     }
                     inst => inst,
@@ -532,7 +534,9 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     IlocInst::Cmp(mut inst) => {
-                        inst.name = "cmp_NE".to_string();
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_NE".to_string();
+                        }
                         IlocInst::Cmp(inst)
                     }
                     inst => inst,
@@ -544,7 +548,9 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     IlocInst::Cmp(mut inst) => {
-                        inst.name = "cmp_LT".to_string();
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_LT".to_string();
+                        }
                         IlocInst::Cmp(inst)
                     }
                     inst => inst,
@@ -556,7 +562,9 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     IlocInst::Cmp(mut inst) => {
-                        inst.name = "cmp_GT".to_string();
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_GT".to_string();
+                        }
                         IlocInst::Cmp(inst)
                     }
                     inst => inst,
@@ -568,7 +576,9 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     IlocInst::Cmp(mut inst) => {
-                        inst.name = "cmp_LE".to_string();
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_LE".to_string();
+                        }
                         IlocInst::Cmp(inst)
                     }
                     inst => inst,
@@ -580,90 +590,98 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     IlocInst::Cmp(mut inst) => {
-                        inst.name = "cmp_GE".to_string();
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_GE".to_string();
+                        }
                         IlocInst::Cmp(inst)
                     }
                     inst => inst,
                 })
                 .collect(),
-            ASTNode::ExprOr(node) => {
-                let mut code = node.code.clone();
-                let mut inst = code.pop();
-                inst = match inst {
-                    Some(mut inst) => {
-                        inst.add_arithm_inst("or".to_string());
-                        Some(inst)
+            ASTNode::ExprOr(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Arithm(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "or".to_string();
+                        }
+                        IlocInst::Arithm(inst)
                     }
-                    None => unreachable!("There should be code in code list"),
-                };
-                code.push(inst.unwrap());
-                code
-            }
-            ASTNode::ExprAnd(node) => {
-                let mut code = node.code.clone();
-                let mut inst = code.pop();
-                inst = match inst {
-                    Some(mut inst) => {
-                        inst.add_arithm_inst("and".to_string());
-                        Some(inst)
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprAnd(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Arithm(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "and".to_string();
+                        }
+                        IlocInst::Arithm(inst)
                     }
-                    None => unreachable!("There should be code in code list"),
-                };
-                code.push(inst.unwrap());
-                code
-            }
-            ASTNode::ExprAdd(node) => {
-                let mut code = node.code.clone();
-                let mut inst = code.pop();
-                inst = match inst {
-                    Some(mut inst) => {
-                        inst.add_arithm_inst("add".to_string());
-                        Some(inst)
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprAdd(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Arithm(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "add".to_string();
+                        }
+                        IlocInst::Arithm(inst)
                     }
-                    None => unreachable!("There should be code in code list"),
-                };
-                code.push(inst.unwrap());
-                code
-            }
-            ASTNode::ExprSub(node) => {
-                let mut code = node.code.clone();
-                let mut inst = code.pop();
-                inst = match inst {
-                    Some(mut inst) => {
-                        inst.add_arithm_inst("sub".to_string());
-                        Some(inst)
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprSub(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Arithm(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "sub".to_string();
+                        }
+                        IlocInst::Arithm(inst)
                     }
-                    None => unreachable!("There should be code in code list"),
-                };
-                code.push(inst.unwrap());
-                code
-            }
-            ASTNode::ExprMul(node) => {
-                let mut code = node.code.clone();
-                let mut inst = code.pop();
-                inst = match inst {
-                    Some(mut inst) => {
-                        inst.add_arithm_inst("mult".to_string());
-                        Some(inst)
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprMul(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Arithm(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "mult".to_string();
+                        }
+                        IlocInst::Arithm(inst)
                     }
-                    None => unreachable!("There should be code in code list"),
-                };
-                code.push(inst.unwrap());
-                code
-            }
-            ASTNode::ExprDiv(node) => {
-                let mut code = node.code.clone();
-                let mut inst = code.pop();
-                inst = match inst {
-                    Some(mut inst) => {
-                        inst.add_arithm_inst("div".to_string());
-                        Some(inst)
+                    inst => inst,
+                })
+                .collect(),
+            ASTNode::ExprDiv(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    IlocInst::Arithm(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "div".to_string();
+                        }
+                        IlocInst::Arithm(inst)
                     }
-                    None => unreachable!("There should be code in code list"),
-                };
-                code.push(inst.unwrap());
-                code
-            }
+                    inst => inst,
+                })
+                .collect(),
             ASTNode::ExprMod(node) => node.code.clone(),
             ASTNode::ExprNeg(node) => node.code.clone(),
             ASTNode::ExprInv(node) => node.code.clone(),
@@ -1542,6 +1560,8 @@ pub struct UnOp {
     ty: Type,
     #[cfg(feature = "code")]
     code: Vec<IlocInst>,
+    #[cfg(feature = "code")]
+    temp: String,
 }
 
 impl UnOp {
@@ -1554,6 +1574,8 @@ impl UnOp {
             ty,
             #[cfg(feature = "code")]
             code: vec![],
+            #[cfg(feature = "code")]
+            temp: "".to_string(),
         }
     }
 
