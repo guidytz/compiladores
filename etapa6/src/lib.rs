@@ -12,11 +12,6 @@ pub mod errors;
 pub mod semantic_aux;
 
 thread_local!(pub static SCOPE_STACK: RefCell<ScopeStack> = RefCell::new(ScopeStack::new()));
-thread_local!(pub static TEMP_COUNTER: RefCell<Vec<String>> = RefCell::new(vec![
-    "%rax".to_string(), "%rbx".to_string(), "%rcx".to_string(), "%rdx".to_string(),
-    "%rsi".to_string(), "%rdi".to_string(),
-    "%r9d".to_string(), "%r10d".to_string(), "%r11d".to_string(), "%r12d".to_string(), "%r13d".to_string(), "%r14d".to_string(), "%r15d".to_string(),
-]));
 thread_local!(pub static LABEL_COUNTER: RefCell<u32> = RefCell::new(0));
 
 pub fn add_symbol_to_curr_st(_symbol_entry: SymbolEntry) -> Result<(), ParsingError> {
@@ -57,12 +52,7 @@ pub fn clear_stack() {
 }
 
 pub fn get_new_temp() -> Result<String, ParsingError> {
-    let temp_val = TEMP_COUNTER.with(|counter| counter.borrow_mut().pop());
-
-    match temp_val {
-        Some(temp_val) => Ok(temp_val),
-        None => Err(ParsingError::NoMoreRegisters),
-    }
+    SCOPE_STACK.with(|stack| stack.borrow_mut().get_reg())
 }
 
 pub fn get_new_label() -> String {
@@ -90,8 +80,8 @@ pub fn change_base_function_desloc(_args_size: u32) {
     SCOPE_STACK.with(|stack| stack.borrow_mut().change_base_function_desloc(_args_size))
 }
 
+#[cfg(feature = "code")]
 pub fn get_fn_label(_name: String) -> Result<String, ParsingError> {
-    #[cfg(feature = "code")]
     return SCOPE_STACK.with(|stack| {
         let label = stack
             .borrow()
@@ -103,9 +93,6 @@ pub fn get_fn_label(_name: String) -> Result<String, ParsingError> {
             .get_label();
         Ok(label)
     });
-
-    #[cfg(not(feature = "code"))]
-    Ok("".to_string())
 }
 
 pub fn get_fn_size(_name: String) -> Result<u32, ParsingError> {
@@ -122,4 +109,44 @@ pub fn get_var_deslocs(_name: String) -> Result<Vec<(String, u32)>, ParsingError
 
     #[cfg(not(feature = "code"))]
     Ok(Vec::new())
+}
+
+#[cfg(feature = "code")]
+pub fn save_regs() -> Vec<asm_aux::AsmInst> {
+    new_reg_temps()
+        .into_iter()
+        .map(|reg| {
+            let reg = if reg.contains("e") {
+                reg.replace("e", "r")
+            } else {
+                reg.replace("d", "")
+            };
+
+            asm_aux::AsmInst::StackInst(asm_aux::StackInst::new("pushq".to_string(), reg))
+        })
+        .collect()
+}
+
+#[cfg(feature = "code")]
+pub fn restore_regs() -> Vec<asm_aux::AsmInst> {
+    new_reg_temps()
+        .into_iter()
+        .rev()
+        .map(|reg| {
+            let reg = if reg.contains("e") {
+                reg.replace("e", "r")
+            } else {
+                reg.replace("d", "")
+            };
+
+            asm_aux::AsmInst::StackInst(asm_aux::StackInst::new("popq".to_string(), reg))
+        })
+        .collect()
+}
+
+pub fn new_reg_temps() -> Vec<&'static str> {
+    vec![
+        "%ebx", "%ecx", "%edx", "%esi", "%edi", "%r9d", "%r10d", "%r11d", "%r12d", "%r13d",
+        "%r14d", "%r15d",
+    ]
 }

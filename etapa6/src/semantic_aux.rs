@@ -8,6 +8,9 @@ use lrpar::NonStreamingLexer;
 use crate::SCOPE_STACK;
 use crate::{ast::ASTNode, errors::ParsingError, get_symbol};
 
+#[cfg(feature = "code")]
+use crate::new_reg_temps;
+
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
     LitInt(SymbolLitInt),
@@ -353,7 +356,7 @@ impl Type {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScopeType {
     Global,
     Fn,
@@ -367,6 +370,8 @@ pub struct SymbolTable {
     pub scope_type: ScopeType,
     pub children: Vec<Box<SymbolTable>>,
     pub name: Option<String>,
+    #[cfg(feature = "code")]
+    pub available_regs: Vec<&'static str>,
 }
 
 impl SymbolTable {
@@ -377,6 +382,8 @@ impl SymbolTable {
             scope_type,
             children: vec![],
             name: None,
+            #[cfg(feature = "code")]
+            available_regs: new_reg_temps(),
         }
     }
 
@@ -454,6 +461,14 @@ impl SymbolTable {
         );
 
         size
+    }
+
+    #[cfg(feature = "code")]
+    pub fn get_reg(&mut self) -> Result<String, ParsingError> {
+        match self.available_regs.pop() {
+            Some(reg) => Ok(reg.to_string()),
+            None => Err(ParsingError::NoMoreRegisters),
+        }
     }
 }
 
@@ -587,6 +602,17 @@ impl ScopeStack {
             }
             self.0.push(table);
         }
+    }
+
+    #[cfg(feature = "code")]
+    pub fn get_reg(&mut self) -> Result<String, ParsingError> {
+        for table in &mut self.0 {
+            if table.scope_type == ScopeType::Fn {
+                return table.get_reg();
+            }
+        }
+
+        unreachable!()
     }
 
     pub fn get_fn_size(&self, name: String) -> Result<u32, ParsingError> {

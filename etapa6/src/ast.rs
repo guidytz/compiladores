@@ -9,6 +9,9 @@ use crate::{
 };
 
 #[cfg(feature = "code")]
+use crate::save_regs;
+
+#[cfg(feature = "code")]
 use crate::{get_fn_size, get_new_temp};
 
 #[cfg(feature = "code")]
@@ -918,6 +921,7 @@ impl FnDeclare {
             code.push(push_rbp);
             code.push(update_rfp);
             code.push(locals_reserve);
+            code.extend(save_regs());
 
             code.extend(comm.code());
 
@@ -1070,13 +1074,8 @@ impl CommAttrib {
         #[cfg(feature = "code")]
         let code = {
             let symbol = get_symbol(ident.span()?, lexer)?;
-            let reg = "%rbp".to_string();
-            let desloc = symbol.desloc();
-            let inst = AsmInst::Mov(Mov::new(
-                "movl".to_string(),
-                expr.temp(),
-                format!("-{desloc}({reg})"),
-            ));
+            let val = get_val(&symbol);
+            let inst = AsmInst::Mov(Mov::new("movl".to_string(), expr.temp(), val));
             let mut code = vec![];
             code.extend(expr.code());
             code.push(inst);
@@ -1883,10 +1882,13 @@ impl Identifier {
 
 #[cfg(feature = "code")]
 fn return_to_caller_insts() -> Vec<AsmInst> {
+    use crate::restore_regs;
+
     let mut code = vec![];
     let leave = AsmInst::SingleInst(None, "leave".to_string());
     let ret = AsmInst::SingleInst(None, "ret".to_string());
 
+    code.extend(restore_regs());
     code.push(leave);
     code.push(ret);
     code
