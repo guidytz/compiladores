@@ -1225,7 +1225,7 @@ impl CommIf {
             let reg = get_new_temp()?;
             let load_reg =
                 AsmInst::Mov(Mov::new("movl".to_string(), "$0".to_string(), reg.clone()));
-            let cmp_op = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), reg));
+            let cmp_op = AsmInst::CmpReg(CmpReg::new(reg, "%eax".to_string()));
             let cmp_ne = AsmInst::Cmp(CmpInst::new("jne".to_string(), label_true.clone()));
             let cbr = AsmInst::Jump(Jump::new(label_false.clone()));
             let true_nop = AsmInst::Nop(Some(label_true));
@@ -1307,7 +1307,7 @@ impl CommWhile {
             let reg = get_new_temp()?;
             let load_reg =
                 AsmInst::Mov(Mov::new("movl".to_string(), "$0".to_string(), reg.clone()));
-            let cmp_op = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), reg));
+            let cmp_op = AsmInst::CmpReg(CmpReg::new(reg, "%eax".to_string()));
             let cmp_ne = AsmInst::Cmp(CmpInst::new("bne".to_string(), label_true.clone()));
             let cbr = AsmInst::Jump(Jump::new(label_later.clone()));
             let true_nop = AsmInst::Nop(Some(label_true));
@@ -1523,7 +1523,7 @@ impl CmpOp {
                 child_left.temp(),
                 "%eax".to_string(),
             ));
-            let cmp_inst = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), child_right.temp()));
+            let cmp_inst = AsmInst::CmpReg(CmpReg::new(child_right.temp(), "%eax".to_string()));
             let jcond = AsmInst::Cmp(CmpInst::new("".to_string(), label_true.clone()));
 
             let cbr_inst = AsmInst::Jump(Jump::new(label_false.clone()));

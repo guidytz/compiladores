@@ -125,7 +125,7 @@ class Storage:
 #
 class Sim:
    def __init__(self, program, bss, fp, trace=False):
-      self.reg = Storage({'rbss':bss, 'rfp':fp, 'rpc':0})
+      self.reg = Storage({'rbss':bss, 'rfp':fp, 'rpc':0, 'rsp':fp})
       self.mem = Storage()
       self.labels = {}
       self.ip = 0
