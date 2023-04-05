@@ -51,6 +51,7 @@ pub fn clear_stack() {
     SCOPE_STACK.with(|stack| stack.borrow_mut().clear());
 }
 
+#[cfg(feature = "code")]
 pub fn get_new_temp() -> Result<String, ParsingError> {
     SCOPE_STACK.with(|stack| stack.borrow_mut().get_reg())
 }
@@ -151,7 +152,7 @@ pub fn new_reg_temps() -> Vec<&'static str> {
     ]
 }
 
+#[cfg(feature = "code")]
 pub fn get_fn_name() -> String {
-    #[cfg(feature = "semantics")]
     SCOPE_STACK.with(|stack| stack.borrow().get_fn_name())
 }

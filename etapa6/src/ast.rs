@@ -3,7 +3,6 @@ use lrlex::{DefaultLexerTypes, LRNonStreamingLexer};
 use lrpar::NonStreamingLexer;
 
 use crate::{
-    asm_aux::CmpReg,
     errors::ParsingError,
     get_symbol,
     semantic_aux::{try_coersion, Type},
@@ -13,7 +12,9 @@ use crate::{
 use crate::{get_fn_size, get_new_temp, save_regs};
 
 #[cfg(feature = "code")]
-use crate::asm_aux::{patch_returns, Directive, Mov, StackInst, RETURN_AND_RBP_OFFSET};
+use crate::asm_aux::{
+    patch_returns, CmpReg, Directive, Mov, Not, StackInst, RETURN_AND_RBP_OFFSET,
+};
 
 #[cfg(feature = "code")]
 use crate::{
@@ -46,7 +47,7 @@ pub enum ASTNode {
     ExprDiv(BinOp),
     ExprMod(BinOp),
     ExprNeg(UnOp),
-    ExprInv(UnOp),
+    ExprInv(InvSigOp),
     LitInt(LitInt),
     LitFloat(LitFloat),
     LitChar(LitChar),
@@ -297,7 +298,14 @@ impl ASTNode {
                 str += &node.child_right.to_string(lexer);
                 str += &node.next.to_string(lexer);
             }
-            ASTNode::ExprNeg(node) | ASTNode::ExprInv(node) => {
+            ASTNode::ExprNeg(node) => {
+                str += &node.child.parent_string(&self);
+                str += &node.next.parent_string(&self);
+
+                str += &node.child.to_string(lexer);
+                str += &node.next.to_string(lexer);
+            }
+            ASTNode::ExprInv(node) => {
                 str += &node.child.parent_string(&self);
                 str += &node.next.parent_string(&self);
 
@@ -730,6 +738,8 @@ impl ASTNode {
             ASTNode::ExprDiv(node) => node.temp.clone(),
             ASTNode::LitInt(node) => node.temp.clone(),
             ASTNode::Identifier(node) => node.temp.clone(),
+            ASTNode::ExprNeg(node) => node.child.temp(),
+            ASTNode::ExprInv(node) => node.child.temp(),
             ASTNode::FnDeclare(_) => unimplemented!("temp not implemented!"),
             ASTNode::VarInit(_) => unimplemented!("temp not implemented!"),
             ASTNode::CommAttrib(_) => unimplemented!("temp not implemented!"),
@@ -739,8 +749,6 @@ impl ASTNode {
             ASTNode::CommIf(_) => unimplemented!("temp not implemented!"),
             ASTNode::CommWhile(_) => unimplemented!("temp not implemented!"),
             ASTNode::ExprMod(_) => unimplemented!("temp not implemented!"),
-            ASTNode::ExprNeg(_) => unimplemented!("temp not implemented!"),
-            ASTNode::ExprInv(_) => unimplemented!("temp not implemented!"),
             ASTNode::LitFloat(_) => unimplemented!("temp not implemented!"),
             ASTNode::LitChar(_) => unimplemented!("temp not implemented!"),
             ASTNode::LitBool(_) => unimplemented!("temp not implemented!"),
@@ -763,57 +771,6 @@ impl ASTNode {
             ASTNode::Identifier(node) => node.gen_load(lexer),
             _ => Ok(()),
         }
-    }
-
-    pub fn gen_init_code(&mut self) -> Result<(), ParsingError> {
-        #[cfg(feature = "code")]
-        {
-            // let mut code = vec![];
-            // let load_rfp = AsmInst::MovImed(InOut::new(
-            //     "loadI".to_string(),
-            //     "1024".to_string(),
-            //     "rfp".to_string(),
-            // ));
-            // let load_rbp = AsmInst::MovImed(InOut::new(
-            //     "loadI".to_string(),
-            //     "1024".to_string(),
-            //     "%rbp".to_string(),
-            // ));
-
-            // let temp_rpc = get_new_temp();
-            // let load_rpc = AsmInst::Arithm(FullOp::new(
-            //     "addI".to_string(),
-            //     "rpc".to_string(),
-            //     "3".to_string(),
-            //     temp_rpc.clone(),
-            // ));
-            // let ret_addr_save = AsmInst::StoreDesl(In2Out::new(
-            //     "movl".to_string(),
-            //     temp_rpc,
-            //     "%rbp".to_string(),
-            //     RET_ADDR.to_string(),
-            // ));
-            // let main_label = get_fn_label("main".to_string())?;
-            // let jump_main = AsmInst::Jump(Jump::new("jumpI".to_string(), main_label));
-
-            // code.push(load_rfp);
-            // code.push(load rbp);
-            // code.extend(save_rfp_ % rbp());
-            // code.push(load_rpc);
-            // code.push(ret_addr_save);
-            // code.push(jump_main);
-            // code.push(AsmInst::Halt);
-
-            // match self {
-            //     ASTNode::FnDeclare(node) => {
-            //         code.extend(node.code.clone());
-            //         node.code = code;
-            //         Ok(())
-            //     }
-            //     _ => Err(ParsingError::NotRootFunction),
-            // }?;
-        }
-        Ok(())
     }
 
     #[cfg(feature = "code")]
@@ -1649,20 +1606,75 @@ pub struct UnOp {
 }
 
 impl UnOp {
-    pub fn new(span: Span, child: Box<ASTNode>) -> Self {
+    pub fn new(span: Span, child: Box<ASTNode>) -> Result<Self, ParsingError> {
         let ty = child.get_type();
         #[cfg(feature = "code")]
-        let node = ASTNode::None(vec![]);
+        let next = ASTNode::None(vec![]);
         #[cfg(not(feature = "code"))]
-        let node = ASTNode::None;
-        Self {
+        let next = ASTNode::None;
+
+        #[cfg(feature = "code")]
+        let code = {
+            let inst = AsmInst::Not(Not::new(child.temp()));
+            let mut code = child.code();
+            code.push(inst);
+            code
+        };
+        Ok(Self {
             span,
             child,
-            next: Box::new(node),
+            next: Box::new(next),
             ty,
             #[cfg(feature = "code")]
-            code: vec![],
-        }
+            code,
+        })
+    }
+
+    pub fn add_next(&mut self, next: Box<ASTNode>) {
+        self.next = next.clone();
+        #[cfg(feature = "code")]
+        self.code.extend(next.code());
+    }
+}
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct InvSigOp {
+    pub span: Span,
+    pub child: Box<ASTNode>,
+    pub next: Box<ASTNode>,
+    ty: Type,
+    #[cfg(feature = "code")]
+    code: Vec<AsmInst>,
+}
+
+impl InvSigOp {
+    pub fn new(span: Span, child: Box<ASTNode>) -> Result<Self, ParsingError> {
+        let ty = child.get_type();
+        #[cfg(feature = "code")]
+        let next = ASTNode::None(vec![]);
+        #[cfg(not(feature = "code"))]
+        let next = ASTNode::None;
+
+        #[cfg(feature = "code")]
+        let code = {
+            let not = AsmInst::Not(Not::new(child.temp()));
+            let add_one = AsmInst::Arithm(FullOp::new(
+                "addl".to_string(),
+                "$1".to_string(),
+                child.temp(),
+            ));
+            let mut code = child.code();
+            code.push(not);
+            code.push(add_one);
+            code
+        };
+        Ok(Self {
+            span,
+            child,
+            next: Box::new(next),
+            ty,
+            #[cfg(feature = "code")]
+            code,
+        })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
@@ -1678,16 +1690,17 @@ pub struct LitInt {
     pub next: Box<ASTNode>,
     #[cfg(feature = "code")]
     code: Vec<AsmInst>,
+    #[cfg(feature = "code")]
     temp: String,
 }
 
 impl LitInt {
     pub fn new(span: Span, _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
         #[cfg(feature = "code")]
-        let val = format!("${}", _lexer.span_str(span));
         let temp = "%r8d".to_string();
         #[cfg(feature = "code")]
         let code = {
+            let val = format!("${}", _lexer.span_str(span));
             let inst = AsmInst::MovImed(InOut::new("movl".to_string(), val, temp.clone()));
             vec![inst]
         };
@@ -1702,6 +1715,7 @@ impl LitInt {
             next: Box::new(node),
             #[cfg(feature = "code")]
             code,
+            #[cfg(feature = "code")]
             temp,
         }
     }

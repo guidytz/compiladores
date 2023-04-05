@@ -388,12 +388,12 @@ mul_div_op -> Result<ASTNode, ParsingError>:
 inv_op -> Result<ASTNode, ParsingError>:
         '-' exp_end {
                 let child = Box::new($2?);
-                let node = UnOp::new($span, child);
+                let node = InvSigOp::new($span, child)?;
                 Ok(ASTNode::ExprInv(node))
         } |
         '!' exp_end {
                 let child = Box::new($2?);
-                let node = UnOp::new($span, child);
+                let node = UnOp::new($span, child)?;
                 Ok(ASTNode::ExprNeg(node))
         } |
         exp_end  { $1 } ;
@@ -513,6 +513,7 @@ use etapa6::{ast::{
         CmpOp,
         BinOp,
         UnOp,
+        InvSigOp,
         LitInt,
         LitFloat,
         LitChar,

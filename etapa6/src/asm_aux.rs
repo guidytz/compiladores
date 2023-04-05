@@ -3,6 +3,7 @@ use crate::semantic_aux::SymbolEntry;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AsmInst {
     Arithm(FullOp),
+    Not(Not),
     MovImed(InOut),
     Mov(Mov),
     LoadDesl(LoadDesl),
@@ -56,6 +57,7 @@ impl AsmInst {
             }
             AsmInst::Directive(dir) => dir.print(),
             AsmInst::Mov(inst) => inst.print(),
+            AsmInst::Not(inst) => inst.print(),
         }
     }
 
@@ -108,6 +110,10 @@ impl AsmInst {
             AsmInst::Mov(mut inst) => {
                 inst.add_label(label);
                 AsmInst::Mov(inst)
+            }
+            AsmInst::Not(mut inst) => {
+                inst.add_label(label);
+                AsmInst::Not(inst)
             }
         }
     }
@@ -392,6 +398,29 @@ impl Jump {
             println!("{label}: ");
         }
         println!("\tjmp\t\t{}", self.dest);
+    }
+
+    pub fn add_label(&mut self, label: String) {
+        self.label = Some(label);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Not {
+    pub dest: String,
+    pub label: Option<String>,
+}
+
+impl Not {
+    pub fn new(dest: String) -> Self {
+        Self { dest, label: None }
+    }
+
+    pub fn print(&self) {
+        if let Some(label) = &self.label {
+            println!("{label}: ");
+        }
+        println!("\tnot\t\t{}", self.dest);
     }
 
     pub fn add_label(&mut self, label: String) {
