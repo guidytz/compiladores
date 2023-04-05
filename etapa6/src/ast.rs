@@ -1221,12 +1221,11 @@ impl CommIf {
                 expr.temp(),
                 "%eax".to_string(),
             ));
-            let load_r8d = AsmInst::Mov(Mov::new(
-                "movl".to_string(),
-                "$0".to_string(),
-                "%r8d".to_string(),
-            ));
-            let cmp_op = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), "%r8d".to_string()));
+
+            let reg = get_new_temp()?;
+            let load_reg =
+                AsmInst::Mov(Mov::new("movl".to_string(), "$0".to_string(), reg.clone()));
+            let cmp_op = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), reg));
             let cmp_ne = AsmInst::Cmp(CmpInst::new("jne".to_string(), label_true.clone()));
             let cbr = AsmInst::Jump(Jump::new(label_false.clone()));
             let true_nop = AsmInst::Nop(Some(label_true));
@@ -1237,7 +1236,7 @@ impl CommIf {
             let mut code = vec![];
             code.extend(expr.code());
             code.push(load_op);
-            code.push(load_r8d);
+            code.push(load_reg);
             code.push(cmp_op);
             code.push(cmp_ne);
             code.push(cbr);
@@ -1304,12 +1303,11 @@ impl CommWhile {
                 expr.temp(),
                 "%eax".to_string(),
             ));
-            let load_r8d = AsmInst::Mov(Mov::new(
-                "movl".to_string(),
-                "$0".to_string(),
-                "%r8d".to_string(),
-            ));
-            let cmp_op = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), "%r8d".to_string()));
+
+            let reg = get_new_temp()?;
+            let load_reg =
+                AsmInst::Mov(Mov::new("movl".to_string(), "$0".to_string(), reg.clone()));
+            let cmp_op = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), reg));
             let cmp_ne = AsmInst::Cmp(CmpInst::new("bne".to_string(), label_true.clone()));
             let cbr = AsmInst::Jump(Jump::new(label_later.clone()));
             let true_nop = AsmInst::Nop(Some(label_true));
@@ -1320,7 +1318,7 @@ impl CommWhile {
             code.push(nop_expr);
             code.extend(expr.code());
             code.push(load_op);
-            code.push(load_r8d);
+            code.push(load_reg);
             code.push(cmp_op);
             code.push(cmp_ne);
             code.push(cbr);
@@ -1443,13 +1441,13 @@ impl BinOp {
     ) -> Result<Self, ParsingError> {
         let ty = try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
         #[cfg(feature = "code")]
-        let temp = child_right.temp();
+        let temp = child_left.temp();
         #[cfg(feature = "code")]
         let code = {
             let inst = AsmInst::Arithm(FullOp::new(
                 "".to_string(),
-                child_left.temp(),
                 child_right.temp(),
+                child_left.temp(),
             ));
             let mut code = vec![];
 
@@ -1695,9 +1693,12 @@ pub struct LitInt {
 }
 
 impl LitInt {
-    pub fn new(span: Span, _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
+    pub fn new(
+        span: Span,
+        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
         #[cfg(feature = "code")]
-        let temp = "%r8d".to_string();
+        let temp = get_new_temp()?;
         #[cfg(feature = "code")]
         let code = {
             let val = format!("${}", _lexer.span_str(span));
@@ -1710,14 +1711,14 @@ impl LitInt {
         #[cfg(not(feature = "code"))]
         let node = ASTNode::None;
 
-        Self {
+        Ok(Self {
             span,
             next: Box::new(node),
             #[cfg(feature = "code")]
             code,
             #[cfg(feature = "code")]
             temp,
-        }
+        })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {

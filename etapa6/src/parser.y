@@ -435,7 +435,7 @@ literals -> Result<ASTNode, ParsingError>:
         "TK_LIT_INT" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);
                 add_symbol_to_curr_st(lit_entry)?;
-                Ok(ASTNode::LitInt(LitInt::new($span, $lexer)))
+                Ok(ASTNode::LitInt(LitInt::new($span, $lexer)?))
         } |
         "TK_LIT_FLOAT" {
                 let lit_entry = SymbolEntry::from_lit_span($span, $lexer);

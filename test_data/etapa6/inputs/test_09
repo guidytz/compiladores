@@ -1,0 +1,8 @@
+// r:11
+int a;
+int main()
+{
+    int b <= 8;
+    a = b + 1 * 3;
+    return a;
+}

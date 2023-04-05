@@ -1,0 +1,7 @@
+// r:5
+int a;
+int main()
+{
+    a = 5 - 1 + 1;
+    return a;
+}

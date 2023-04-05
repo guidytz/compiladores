@@ -30,34 +30,38 @@ impl AsmInst {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
         match self {
-            AsmInst::Arithm(op) => op.print(),
-            AsmInst::MovImed(op) => op.print(),
-            AsmInst::LoadDesl(op) => op.print(),
-            AsmInst::StoreImed(op) => op.print(),
-            AsmInst::StoreDesl(op) => op.print(),
-            AsmInst::CmpReg(op) => op.print(),
-            AsmInst::Cmp(op) => op.print(),
-            AsmInst::Jump(op) => op.print(),
+            AsmInst::Arithm(op) => op.code_str(),
+            AsmInst::MovImed(op) => op.code_str(),
+            AsmInst::LoadDesl(op) => op.code_str(),
+            AsmInst::StoreImed(op) => op.code_str(),
+            AsmInst::StoreDesl(op) => op.code_str(),
+            AsmInst::CmpReg(op) => op.code_str(),
+            AsmInst::Cmp(op) => op.code_str(),
+            AsmInst::Jump(op) => op.code_str(),
             AsmInst::Nop(label) => {
+                let mut code_str = "".to_string();
                 if let Some(label) = label {
-                    println!("{label}: ");
+                    code_str += &format!("{label}: ");
                 }
-                println!("\tnop");
+                code_str += &format!("\tnop\n");
+                code_str
             }
-            AsmInst::Halt => println!("\thlt"),
-            AsmInst::Empty => (),
-            AsmInst::StackInst(inst) => inst.print(),
+            AsmInst::Halt => format!("\thlt\n"),
+            AsmInst::Empty => "".to_string(),
+            AsmInst::StackInst(inst) => inst.code_str(),
             AsmInst::SingleInst(label, name) => {
+                let mut code_str = "".to_string();
                 if let Some(label) = label {
-                    println!("{label}: ");
+                    code_str += &format!("{label}: ");
                 }
-                println!("\t{name}");
+                code_str += &format!("\t{name}\n");
+                code_str
             }
-            AsmInst::Directive(dir) => dir.print(),
-            AsmInst::Mov(inst) => inst.print(),
-            AsmInst::Not(inst) => inst.print(),
+            AsmInst::Directive(dir) => dir.code_str(),
+            AsmInst::Mov(inst) => inst.code_str(),
+            AsmInst::Not(inst) => inst.code_str(),
         }
     }
 
@@ -148,11 +152,13 @@ impl FullOp {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\t{}\t{}, {}", self.name, self.op1, self.op2);
+        code_str += &format!("\t{}\t{}, {}\n", self.name, self.op1, self.op2);
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -178,20 +184,22 @@ impl Directive {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        print!("\t.{}", self.name);
+        code_str += &format!("\t.{}", self.name);
 
         if let Some(op1) = &self.op1 {
-            print!("\t{}", op1);
+            code_str += &format!("\t{}", op1);
         }
 
         if let Some(op2) = &self.op2 {
-            print!(", {}", op2);
+            code_str += &format!(", {}", op2);
         }
-        println!("");
+        code_str += &format!("\n");
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -217,11 +225,13 @@ impl Mov {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\t{}\t{}, {}", self.name, self.source, self.dest);
+        code_str += &format!("\t{}\t{}, {}\n", self.name, self.source, self.dest);
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -245,11 +255,13 @@ impl CmpReg {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\tcmp\t\t{}, {}", self.reg1, self.reg2);
+        code_str += &format!("\tcmp\t\t{}, {}\n", self.reg1, self.reg2);
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -277,14 +289,16 @@ impl LoadDesl {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!(
-            "\t{}\t{}({}), {}",
+        code_str += &format!(
+            "\t{}\t{}({}), {}\n",
             self.name, self.desl, self.reg1, self.reg2
         );
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -308,11 +322,13 @@ impl CmpInst {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\t{}\t\t{}", self.name, self.dest);
+        code_str += &format!("\t{}\t\t{}\n", self.name, self.dest);
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -338,11 +354,13 @@ impl InOut {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\t{}\t{}, {}", self.name, self.op, self.dest);
+        code_str += &format!("\t{}\t{}, {}\n", self.name, self.op, self.dest);
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -370,11 +388,16 @@ impl In2Out {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\t{}\t{}, {}({})", self.name, self.op, self.desl, self.dest);
+        code_str += &format!(
+            "\t{}\t{}, {}({})\n",
+            self.name, self.op, self.desl, self.dest
+        );
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -393,11 +416,13 @@ impl Jump {
         Self { dest, label: None }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\tjmp\t\t{}", self.dest);
+        code_str += &format!("\tjmp\t\t{}\n", self.dest);
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -416,11 +441,13 @@ impl Not {
         Self { dest, label: None }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\tnot\t\t{}", self.dest);
+        code_str += &format!("\tnot\t\t{}\n", self.dest);
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -444,11 +471,13 @@ impl StackInst {
         }
     }
 
-    pub fn print(&self) {
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
         if let Some(label) = &self.label {
-            println!("{label}: ");
+            code_str += &format!("{label}: ");
         }
-        println!("\t{}\t{}", self.name, self.dest);
+        code_str += &format!("\t{}\t{}\n", self.name, self.dest);
+        code_str
     }
 
     pub fn add_label(&mut self, label: String) {

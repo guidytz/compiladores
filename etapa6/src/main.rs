@@ -62,9 +62,9 @@ fn main() -> ExitCode {
                 println!("{:#?}", tree);
 
                 #[cfg(feature = "code")]
-                for op in tree.code() {
-                    op.print();
-                }
+                tree.code()
+                    .into_iter()
+                    .for_each(|inst| print!("{}", inst.code_str()));
 
                 #[cfg(not(feature = "code"))]
                 {
