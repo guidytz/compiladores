@@ -1,0 +1,12 @@
+// r:7
+int a;
+int main()
+{
+    int b <= 8;
+    if (b > 10) then {
+        a = 2;
+    } else {
+        a = 7;
+    };
+    return a;
+}

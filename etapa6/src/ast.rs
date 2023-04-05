@@ -1308,7 +1308,7 @@ impl CommWhile {
             let load_reg =
                 AsmInst::Mov(Mov::new("movl".to_string(), "$0".to_string(), reg.clone()));
             let cmp_op = AsmInst::CmpReg(CmpReg::new(reg, "%eax".to_string()));
-            let cmp_ne = AsmInst::Cmp(CmpInst::new("bne".to_string(), label_true.clone()));
+            let cmp_ne = AsmInst::Cmp(CmpInst::new("jne".to_string(), label_true.clone()));
             let cbr = AsmInst::Jump(Jump::new(label_later.clone()));
             let true_nop = AsmInst::Nop(Some(label_true));
             let jump_back = AsmInst::Jump(Jump::new(label_expr.clone()));
