@@ -8,9 +8,8 @@ pub enum AsmInst {
     LoadDesl(LoadDesl),
     StoreImed(InOut),
     StoreDesl(In2Out),
-    RegCopy(InOut),
+    CmpReg(CmpReg),
     Cmp(CmpInst),
-    Cbr(In2Out),
     Jump(Jump),
     StackInst(StackInst),
     Nop(Option<String>),
@@ -37,9 +36,8 @@ impl AsmInst {
             AsmInst::LoadDesl(op) => op.print(),
             AsmInst::StoreImed(op) => op.print(),
             AsmInst::StoreDesl(op) => op.print(),
-            AsmInst::RegCopy(op) => op.print(),
+            AsmInst::CmpReg(op) => op.print(),
             AsmInst::Cmp(op) => op.print(),
-            AsmInst::Cbr(op) => op.print(),
             AsmInst::Jump(op) => op.print(),
             AsmInst::Nop(label) => {
                 if let Some(label) = label {
@@ -83,17 +81,13 @@ impl AsmInst {
                 inst.add_label(label);
                 AsmInst::StoreDesl(inst)
             }
-            AsmInst::RegCopy(mut inst) => {
+            AsmInst::CmpReg(mut inst) => {
                 inst.add_label(label);
-                AsmInst::RegCopy(inst)
+                AsmInst::CmpReg(inst)
             }
             AsmInst::Cmp(mut inst) => {
                 inst.add_label(label);
                 AsmInst::Cmp(inst)
-            }
-            AsmInst::Cbr(mut inst) => {
-                inst.add_label(label);
-                AsmInst::Cbr(inst)
             }
             AsmInst::Jump(mut inst) => {
                 inst.add_label(label);
@@ -115,6 +109,17 @@ impl AsmInst {
                 inst.add_label(label);
                 AsmInst::Mov(inst)
             }
+        }
+    }
+
+    pub fn patch_jump<'a>(self, name: &'a str) -> Self {
+        match self {
+            AsmInst::Jump(mut jump) => {
+                let dest = jump.dest.replace("patch", name);
+                jump.dest = dest;
+                AsmInst::Jump(jump)
+            }
+            _ => self,
         }
     }
 }
@@ -219,6 +224,34 @@ impl Mov {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct CmpReg {
+    pub reg1: String,
+    pub reg2: String,
+    pub label: Option<String>,
+}
+
+impl CmpReg {
+    pub fn new(reg1: String, reg2: String) -> Self {
+        Self {
+            reg1,
+            reg2,
+            label: None,
+        }
+    }
+
+    pub fn print(&self) {
+        if let Some(label) = &self.label {
+            println!("{label}: ");
+        }
+        println!("\tcmp\t\t{}, {}", self.reg1, self.reg2);
+    }
+
+    pub fn add_label(&mut self, label: String) {
+        self.label = Some(label);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LoadDesl {
     pub name: String,
     pub desl: String,
@@ -256,18 +289,14 @@ impl LoadDesl {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CmpInst {
     pub name: String,
-    pub op1: String,
-    pub op2: String,
     pub dest: String,
     pub label: Option<String>,
 }
 
 impl CmpInst {
-    pub fn new(name: String, op1: String, op2: String, dest: String) -> Self {
+    pub fn new(name: String, dest: String) -> Self {
         Self {
             name,
-            op1,
-            op2,
             dest,
             label: None,
         }
@@ -277,10 +306,7 @@ impl CmpInst {
         if let Some(label) = &self.label {
             println!("{label}: ");
         }
-        println!(
-            "\t{} {}, {} -> {}",
-            self.name, self.op1, self.op2, self.dest
-        );
+        println!("\t{}\t\t{}", self.name, self.dest);
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -352,25 +378,20 @@ impl In2Out {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Jump {
-    pub name: String,
     pub dest: String,
     pub label: Option<String>,
 }
 
 impl Jump {
-    pub fn new(name: String, dest: String) -> Self {
-        Self {
-            name,
-            dest,
-            label: None,
-        }
+    pub fn new(dest: String) -> Self {
+        Self { dest, label: None }
     }
 
     pub fn print(&self) {
         if let Some(label) = &self.label {
             println!("{label}: ");
         }
-        println!("\t{} => {}", self.name, self.dest);
+        println!("\tjmp\t\t{}", self.dest);
     }
 
     pub fn add_label(&mut self, label: String) {
@@ -447,4 +468,10 @@ pub fn gen_global_declr_code(symbol: &SymbolEntry) -> Vec<AsmInst> {
     code.push(zero_directive);
 
     code
+}
+
+pub fn patch_returns<'a>(name: &'a str, code: Vec<AsmInst>) -> Vec<AsmInst> {
+    code.into_iter()
+        .map(|inst| inst.patch_jump(&name))
+        .collect()
 }

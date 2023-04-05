@@ -150,3 +150,8 @@ pub fn new_reg_temps() -> Vec<&'static str> {
         "%r14d", "%r15d",
     ]
 }
+
+pub fn get_fn_name() -> String {
+    #[cfg(feature = "semantics")]
+    SCOPE_STACK.with(|stack| stack.borrow().get_fn_name())
+}

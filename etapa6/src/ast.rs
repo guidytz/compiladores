@@ -3,19 +3,17 @@ use lrlex::{DefaultLexerTypes, LRNonStreamingLexer};
 use lrpar::NonStreamingLexer;
 
 use crate::{
+    asm_aux::CmpReg,
     errors::ParsingError,
     get_symbol,
     semantic_aux::{try_coersion, Type},
 };
 
 #[cfg(feature = "code")]
-use crate::save_regs;
+use crate::{get_fn_size, get_new_temp, save_regs};
 
 #[cfg(feature = "code")]
-use crate::{get_fn_size, get_new_temp};
-
-#[cfg(feature = "code")]
-use crate::asm_aux::{Directive, Mov, StackInst, RETURN_AND_RBP_OFFSET};
+use crate::asm_aux::{patch_returns, Directive, Mov, StackInst, RETURN_AND_RBP_OFFSET};
 
 #[cfg(feature = "code")]
 use crate::{
@@ -558,7 +556,7 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     AsmInst::Cmp(mut inst) => {
-                        inst.name = "cmp_EQ".to_string();
+                        inst.name = "je".to_string();
                         AsmInst::Cmp(inst)
                     }
                     inst => inst,
@@ -570,7 +568,7 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     AsmInst::Cmp(mut inst) => {
-                        inst.name = "cmp_NE".to_string();
+                        inst.name = "jne".to_string();
                         AsmInst::Cmp(inst)
                     }
                     inst => inst,
@@ -582,7 +580,7 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     AsmInst::Cmp(mut inst) => {
-                        inst.name = "cmp_LT".to_string();
+                        inst.name = "jl".to_string();
                         AsmInst::Cmp(inst)
                     }
                     inst => inst,
@@ -594,7 +592,7 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     AsmInst::Cmp(mut inst) => {
-                        inst.name = "cmp_GT".to_string();
+                        inst.name = "jg".to_string();
                         AsmInst::Cmp(inst)
                     }
                     inst => inst,
@@ -606,7 +604,7 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     AsmInst::Cmp(mut inst) => {
-                        inst.name = "cmp_LE".to_string();
+                        inst.name = "jle".to_string();
                         AsmInst::Cmp(inst)
                     }
                     inst => inst,
@@ -618,7 +616,7 @@ impl ASTNode {
                 .into_iter()
                 .map(|inst| match inst {
                     AsmInst::Cmp(mut inst) => {
-                        inst.name = "cmp_GE".to_string();
+                        inst.name = "jge".to_string();
                         AsmInst::Cmp(inst)
                     }
                     inst => inst,
@@ -925,9 +923,9 @@ impl FnDeclare {
 
             code.extend(comm.code());
 
-            code.extend(return_to_caller_insts());
+            code.extend(return_to_caller_insts(label.clone()));
             code.push(size_declr);
-            code
+            patch_returns(&label, code)
         };
 
         #[cfg(feature = "code")]
@@ -1141,7 +1139,6 @@ impl CommFnCall {
             code.extend(expr.code());
             temps
                 .into_iter()
-                .rev()
                 .zip(deslocs)
                 .for_each(|(temp, (_key, desloc))| {
                     #[cfg(feature = "debug")]
@@ -1220,6 +1217,10 @@ impl CommReturn {
                 "%eax".to_string(),
             ));
             code.push(save_ret_value);
+
+            let jump_exit = AsmInst::Jump(Jump::new("e_patch".to_string()));
+            code.push(jump_exit);
+
             code
         };
         Self {
@@ -1258,30 +1259,29 @@ impl CommIf {
             let label_false = get_new_label();
             let label_later = get_new_label();
 
-            let temp = get_new_temp()?;
-            let op_temp = get_new_temp()?;
-            let load_op =
-                AsmInst::MovImed(InOut::new("loadI".to_string(), 0.to_string(), temp.clone()));
-            let cmp_ne = AsmInst::Cmp(CmpInst::new(
-                "cmp_NE".to_string(),
+            let load_op = AsmInst::Mov(Mov::new(
+                "movl".to_string(),
                 expr.temp(),
-                temp,
-                op_temp.clone(),
+                "%eax".to_string(),
             ));
-            let cbr = AsmInst::Cbr(In2Out::new(
-                "cbr".to_string(),
-                op_temp,
-                label_true.clone(),
-                label_false.clone(),
+            let load_r8d = AsmInst::Mov(Mov::new(
+                "movl".to_string(),
+                "$0".to_string(),
+                "%r8d".to_string(),
             ));
+            let cmp_op = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), "%r8d".to_string()));
+            let cmp_ne = AsmInst::Cmp(CmpInst::new("jne".to_string(), label_true.clone()));
+            let cbr = AsmInst::Jump(Jump::new(label_false.clone()));
             let true_nop = AsmInst::Nop(Some(label_true));
-            let jump_later = AsmInst::Jump(Jump::new("jumpI".to_string(), label_later.clone()));
+            let jump_later = AsmInst::Jump(Jump::new(label_later.clone()));
             let false_nop = AsmInst::Nop(Some(label_false));
             let later_nop = AsmInst::Nop(Some(label_later));
 
             let mut code = vec![];
             code.extend(expr.code());
             code.push(load_op);
+            code.push(load_r8d);
+            code.push(cmp_op);
             code.push(cmp_ne);
             code.push(cbr);
             code.push(true_nop);
@@ -1341,31 +1341,30 @@ impl CommWhile {
             let label_true = get_new_label();
             let label_later = get_new_label();
 
-            let temp = get_new_temp()?;
-            let op_temp = get_new_temp()?;
             let nop_expr = AsmInst::Nop(Some(label_expr.clone()));
-            let load_op =
-                AsmInst::MovImed(InOut::new("loadI".to_string(), 0.to_string(), temp.clone()));
-            let cmp_ne = AsmInst::Cmp(CmpInst::new(
-                "cmp_NE".to_string(),
+            let load_op = AsmInst::Mov(Mov::new(
+                "movl".to_string(),
                 expr.temp(),
-                temp,
-                op_temp.clone(),
+                "%eax".to_string(),
             ));
-            let cbr = AsmInst::Cbr(In2Out::new(
-                "cbr".to_string(),
-                op_temp,
-                label_true.clone(),
-                label_later.clone(),
+            let load_r8d = AsmInst::Mov(Mov::new(
+                "movl".to_string(),
+                "$0".to_string(),
+                "%r8d".to_string(),
             ));
+            let cmp_op = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), "%r8d".to_string()));
+            let cmp_ne = AsmInst::Cmp(CmpInst::new("bne".to_string(), label_true.clone()));
+            let cbr = AsmInst::Jump(Jump::new(label_later.clone()));
             let true_nop = AsmInst::Nop(Some(label_true));
-            let jump_back = AsmInst::Jump(Jump::new("jumpI".to_string(), label_expr.clone()));
+            let jump_back = AsmInst::Jump(Jump::new(label_expr.clone()));
             let later_nop = AsmInst::Nop(Some(label_later));
 
             let mut code = vec![];
             code.push(nop_expr);
             code.extend(expr.code());
             code.push(load_op);
+            code.push(load_r8d);
+            code.push(cmp_op);
             code.push(cmp_ne);
             code.push(cbr);
             code.push(true_nop);
@@ -1564,32 +1563,28 @@ impl CmpOp {
             let label_false = get_new_label();
             let label_end = get_new_label();
 
-            let cmp_inst = AsmInst::Cmp(CmpInst::new(
-                "".to_string(),
+            let load_eax = AsmInst::Mov(Mov::new(
+                "movl".to_string(),
                 child_left.temp(),
-                child_right.temp(),
-                temp.clone(),
+                "%eax".to_string(),
             ));
+            let cmp_inst = AsmInst::CmpReg(CmpReg::new("%eax".to_string(), child_right.temp()));
+            let jcond = AsmInst::Cmp(CmpInst::new("".to_string(), label_true.clone()));
 
-            let cbr_inst = AsmInst::Cbr(In2Out::new(
-                "cbr".to_string(),
-                temp.clone(),
-                label_true.clone(),
-                label_false.clone(),
-            ));
+            let cbr_inst = AsmInst::Jump(Jump::new(label_false.clone()));
 
             let load_true = AsmInst::MovImed(InOut::new(
-                "loadI".to_string(),
-                "1".to_string(),
+                "movl".to_string(),
+                "$1".to_string(),
                 temp.clone(),
             ))
             .add_label(label_true);
 
-            let jump_later = AsmInst::Jump(Jump::new("jumpI".to_string(), label_end.clone()));
+            let jump_later = AsmInst::Jump(Jump::new(label_end.clone()));
 
             let load_false = AsmInst::MovImed(InOut::new(
-                "loadI".to_string(),
-                "0".to_string(),
+                "movl".to_string(),
+                "$0".to_string(),
                 temp.clone(),
             ))
             .add_label(label_false);
@@ -1600,7 +1595,9 @@ impl CmpOp {
 
             code.extend(child_left.code());
             code.extend(child_right.code());
+            code.push(load_eax);
             code.push(cmp_inst);
+            code.push(jcond);
             code.push(cbr_inst);
             code.push(load_true);
             code.push(jump_later);
@@ -1881,10 +1878,10 @@ impl Identifier {
 }
 
 #[cfg(feature = "code")]
-fn return_to_caller_insts() -> Vec<AsmInst> {
+fn return_to_caller_insts(fn_name: String) -> Vec<AsmInst> {
     use crate::restore_regs;
 
-    let mut code = vec![];
+    let mut code = vec![AsmInst::Nop(Some(format!("e_{fn_name}")))];
     let leave = AsmInst::SingleInst(None, "leave".to_string());
     let ret = AsmInst::SingleInst(None, "ret".to_string());
 

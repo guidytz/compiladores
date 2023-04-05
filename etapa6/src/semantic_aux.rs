@@ -470,6 +470,14 @@ impl SymbolTable {
             None => Err(ParsingError::NoMoreRegisters),
         }
     }
+
+    #[cfg(feature = "code")]
+    pub fn get_name(&self) -> String {
+        match &self.name {
+            Some(name) => name.clone(),
+            None => "".to_string(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -655,6 +663,17 @@ impl ScopeStack {
         }
 
         Ok(deslocs)
+    }
+
+    #[cfg(feature = "code")]
+    pub fn get_fn_name(&self) -> String {
+        for table in self.0.iter().rev() {
+            if table.scope_type == ScopeType::Fn {
+                return table.get_name();
+            }
+        }
+
+        unreachable!()
     }
 }
 
