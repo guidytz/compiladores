@@ -1,0 +1,13 @@
+// r:15
+int main()
+{
+    int a;
+    int b;
+    int c;
+    b = 30;
+    c = 15;
+    a = b - c;
+    b = a - c;
+    c = a - b;
+    return c;
+}

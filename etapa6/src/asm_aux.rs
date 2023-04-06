@@ -4,6 +4,7 @@ use crate::semantic_aux::SymbolEntry;
 pub enum AsmInst {
     Arithm(FullOp),
     Not(Not),
+    Div(DivInst),
     MovImed(InOut),
     Mov(Mov),
     LoadDesl(LoadDesl),
@@ -62,6 +63,7 @@ impl AsmInst {
             AsmInst::Directive(dir) => dir.code_str(),
             AsmInst::Mov(inst) => inst.code_str(),
             AsmInst::Not(inst) => inst.code_str(),
+            AsmInst::Div(inst) => inst.code_str(),
         }
     }
 
@@ -118,6 +120,10 @@ impl AsmInst {
             AsmInst::Not(mut inst) => {
                 inst.add_label(label);
                 AsmInst::Not(inst)
+            }
+            AsmInst::Div(mut inst) => {
+                inst.add_label(label);
+                AsmInst::Div(inst)
             }
         }
     }
@@ -447,6 +453,31 @@ impl Not {
             code_str += &format!("{label}:\n");
         }
         code_str += &format!("\tnot\t\t{}\n", self.dest);
+        code_str
+    }
+
+    pub fn add_label(&mut self, label: String) {
+        self.label = Some(label);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct DivInst {
+    pub dest: String,
+    pub label: Option<String>,
+}
+
+impl DivInst {
+    pub fn new(dest: String) -> Self {
+        Self { dest, label: None }
+    }
+
+    pub fn code_str(&self) -> String {
+        let mut code_str = "".to_string();
+        if let Some(label) = &self.label {
+            code_str += &format!("{label}:\n");
+        }
+        code_str += &format!("\tidiv\t{}\n", self.dest);
         code_str
     }
 

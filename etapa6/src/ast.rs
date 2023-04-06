@@ -13,7 +13,7 @@ use crate::{get_fn_size, get_new_temp, save_regs};
 
 #[cfg(feature = "code")]
 use crate::asm_aux::{
-    patch_returns, CmpReg, Directive, Mov, Not, StackInst, RETURN_AND_RBP_OFFSET,
+    patch_returns, CmpReg, Directive, DivInst, Mov, Not, StackInst, RETURN_AND_RBP_OFFSET,
 };
 
 #[cfg(feature = "code")]
@@ -44,7 +44,7 @@ pub enum ASTNode {
     ExprAdd(BinOp),
     ExprSub(BinOp),
     ExprMul(BinOp),
-    ExprDiv(BinOp),
+    ExprDiv(Div),
     ExprMod(BinOp),
     ExprNeg(UnOp),
     ExprInv(InvSigOp),
@@ -288,8 +288,16 @@ impl ASTNode {
             | ASTNode::ExprAdd(node)
             | ASTNode::ExprSub(node)
             | ASTNode::ExprMul(node)
-            | ASTNode::ExprDiv(node)
             | ASTNode::ExprMod(node) => {
+                str += &node.child_left.parent_string(&self);
+                str += &node.child_right.parent_string(&self);
+                str += &node.next.parent_string(&self);
+
+                str += &node.child_left.to_string(lexer);
+                str += &node.child_right.to_string(lexer);
+                str += &node.next.to_string(lexer);
+            }
+            ASTNode::ExprDiv(node) => {
                 str += &node.child_left.parent_string(&self);
                 str += &node.child_right.parent_string(&self);
                 str += &node.next.parent_string(&self);
@@ -695,19 +703,7 @@ impl ASTNode {
                 code.push(inst.unwrap());
                 code
             }
-            ASTNode::ExprDiv(node) => {
-                let mut code = node.code.clone();
-                let mut inst = code.pop();
-                inst = match inst {
-                    Some(mut inst) => {
-                        inst.add_arithm_inst("divl".to_string());
-                        Some(inst)
-                    }
-                    None => unreachable!("There should be code in code list"),
-                };
-                code.push(inst.unwrap());
-                code
-            }
+            ASTNode::ExprDiv(node) => node.code.clone(),
             ASTNode::ExprMod(node) => node.code.clone(),
             ASTNode::ExprNeg(node) => node.code.clone(),
             ASTNode::ExprInv(node) => node.code.clone(),
@@ -1454,6 +1450,90 @@ impl BinOp {
             code.extend(child_left.code());
             code.extend(child_right.code());
             code.push(inst);
+            code
+        };
+
+        #[cfg(feature = "code")]
+        let node = ASTNode::None(vec![]);
+        #[cfg(not(feature = "code"))]
+        let node = ASTNode::None;
+
+        Ok(Self {
+            span,
+            child_left,
+            child_right,
+            next: Box::new(node),
+            ty,
+            #[cfg(feature = "code")]
+            temp,
+            #[cfg(feature = "code")]
+            code,
+        })
+    }
+
+    pub fn add_next(&mut self, next: Box<ASTNode>) {
+        self.next = next.clone();
+        #[cfg(feature = "code")]
+        self.code.extend(next.code());
+    }
+
+    #[cfg(feature = "code")]
+    pub fn get_temps(&self) -> Vec<String> {
+        let mut temps = vec![self.temp.clone()];
+        temps.extend(self.next.get_temps());
+        temps
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Div {
+    pub span: Span,
+    pub child_left: Box<ASTNode>,
+    pub child_right: Box<ASTNode>,
+    pub next: Box<ASTNode>,
+    ty: Type,
+    #[cfg(feature = "code")]
+    temp: String,
+    #[cfg(feature = "code")]
+    code: Vec<AsmInst>,
+}
+
+impl Div {
+    pub fn new(
+        span: Span,
+        child_left: Box<ASTNode>,
+        child_right: Box<ASTNode>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        let ty = try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
+        #[cfg(feature = "code")]
+        let temp = get_new_temp()?;
+        #[cfg(feature = "code")]
+        let code = {
+            let high = AsmInst::Mov(Mov::new(
+                "movl".to_string(),
+                "$0".to_string(),
+                "%edx".to_string(),
+            ));
+            let low = AsmInst::Mov(Mov::new(
+                "movl".to_string(),
+                child_left.temp(),
+                "%eax".to_string(),
+            ));
+            let inst = AsmInst::Div(DivInst::new(child_right.temp()));
+            let temp_load = AsmInst::Mov(Mov::new(
+                "movl".to_string(),
+                "%eax".to_string(),
+                temp.clone(),
+            ));
+            let mut code = vec![];
+
+            code.extend(child_left.code());
+            code.extend(child_right.code());
+            code.push(low);
+            code.push(high);
+            code.push(inst);
+            code.push(temp_load);
             code
         };
 

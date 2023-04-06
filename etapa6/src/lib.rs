@@ -147,8 +147,8 @@ pub fn restore_regs() -> Vec<asm_aux::AsmInst> {
 
 pub fn new_reg_temps() -> Vec<&'static str> {
     vec![
-        "%ebx", "%ecx", "%edx", "%esi", "%edi", "%r8d", "%r9d", "%r10d", "%r11d", "%r12d", "%r13d",
-        "%r14d", "%r15d",
+        "%ebx", "%ecx", "%r8d", "%r9d", "%r10d", "%r11d", "%r12d", "%r13d", "%r14d", "%r15d",
+        "%esi", "%edi",
     ]
 }
 

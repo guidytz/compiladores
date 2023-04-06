@@ -377,7 +377,7 @@ mul_div_op -> Result<ASTNode, ParsingError>:
         mul_div_op '/' inv_op {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinOp::new($span, child_left, child_right, $lexer)?;
+                let node = Div::new($span, child_left, child_right, $lexer)?;
                 Ok(ASTNode::ExprDiv(node))
         } |
         mul_div_op '%' inv_op {
@@ -515,6 +515,7 @@ use etapa6::{ast::{
         ExprIdxNode,
         CmpOp,
         BinOp,
+        Div,
         UnOp,
         InvSigOp,
         LitInt,
