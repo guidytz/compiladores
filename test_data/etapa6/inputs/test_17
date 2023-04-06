@@ -1,0 +1,11 @@
+// r:9
+int main()
+{
+    int a, b <= 0, c <= 0;
+    if (b || c) then {
+        a = 10;
+    } else {
+        a = 9;
+    };
+    return a;
+}

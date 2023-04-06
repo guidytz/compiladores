@@ -98,6 +98,9 @@ function -> Result<ASTNode, ParsingError>:
 fun_params -> Result<Option<Vec<SymbolEntry>>, ParsingError>:
         '(' begin_fn_scope param_list ')' {
                 let symbols = $3?;
+                for symbol in &symbols {
+                        add_symbol_to_curr_st(symbol.clone())?;
+                }
                 // let args_size = symbols.iter().map(|symbol| symbol.size()).reduce(|acc, size| acc + size).unwrap_or(0);
                 change_base_function_desloc(4);
                 Ok(Some(symbols))
@@ -111,7 +114,7 @@ param_list -> Result<Vec<SymbolEntry>, ParsingError>:
         type ident ',' param_list {
                 let name = $lexer.span_str($2?.span()?).to_string();
                 let var = SymbolEntry::Var(CommonAttrs::new(name, $1?, $span, $lexer));
-                add_symbol_to_curr_st(var.clone())?;
+                // add_symbol_to_curr_st(var.clone())?;
 
                 let mut list = vec![var];
                 list.extend($4?);
@@ -120,7 +123,7 @@ param_list -> Result<Vec<SymbolEntry>, ParsingError>:
         type ident  {
                 let name = $lexer.span_str($2?.span()?).to_string();
                 let var = SymbolEntry::Var(CommonAttrs::new(name, $1?, $span, $lexer));
-                add_symbol_to_curr_st(var.clone())?;
+                // add_symbol_to_curr_st(var.clone())?;
 
                 Ok(vec![var])
         } ;

@@ -1,0 +1,12 @@
+// r:5
+int adddois(int a)
+{
+    return a + 2;
+}
+
+int main()
+{
+    int a <= 3;
+    a = adddois(a);
+    return a;
+}

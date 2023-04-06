@@ -1,0 +1,13 @@
+// r:0
+int adddois(int a)
+{
+    return a + 2;
+}
+
+int main()
+{
+    int a <= 2, b;
+    a = -a;
+    b = adddois(a);
+    return b;
+}

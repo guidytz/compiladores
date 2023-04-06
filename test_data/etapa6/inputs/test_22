@@ -1,0 +1,20 @@
+// r:34
+int mult(int r, int s)
+{
+    int g;
+    g = r * s;
+    return g;
+}
+
+int func(int a, int b)
+{
+    int c;
+    c = mult(a, b);
+    return a + c;
+}
+
+int main()
+{
+    int a <= 2, b <= 16;
+    return func(a, b);
+}

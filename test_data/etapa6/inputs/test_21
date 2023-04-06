@@ -1,0 +1,11 @@
+// r:80
+int add(int a, int b)
+{
+    return a + b;
+}
+
+int main()
+{
+    int a <= 2, b <= 78;
+    return add(a, b);
+}

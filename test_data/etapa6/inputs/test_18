@@ -1,0 +1,12 @@
+// r:2
+int retdois()
+{
+    return 2;
+}
+
+int main()
+{
+    int a;
+    a = retdois();
+    return a;
+}
