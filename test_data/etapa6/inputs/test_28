@@ -1,0 +1,12 @@
+// r:5
+int main()
+{
+  int a;
+  int b;
+  int c;
+  b = 75;
+  c = 3;
+  a = b / c;
+  b = a / 5;
+  return b;
+}
