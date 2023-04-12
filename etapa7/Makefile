@@ -14,6 +14,8 @@ clean:
 	cargo clean
 	rm -f etapa7 Cargo.lock
 	rm -rf target
+	rm -rf *.dot
+	rm -rf *.png
 
 test: # only works with test data dir
 	cargo test --features onlylex 							--no-default-features --test test-etapa1 -- --nocapture
@@ -23,7 +25,7 @@ test: # only works with test data dir
 	cargo test --features lexparser --features semantics --features code  		  --test test-etapa5 -- --nocapture
 
 zip:
-	tar cvzf etapa7.tgz Makefile Cargo.toml build.rs src/ tests/
+	tar cvzf etapa7.tgz Makefile Cargo.toml build.rs src/ tests/ examples/
 
 ex1: main
 	./etapa7 < examples/ex1 > ex1.dot
