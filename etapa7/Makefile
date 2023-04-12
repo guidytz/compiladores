@@ -12,10 +12,11 @@ debug-tree:
 
 clean:
 	cargo clean
-	rm -f etapa7 Cargo.lock
-	rm -rf target
-	rm -rf *.dot
-	rm -rf *.png
+	rm -rf etapa7 Cargo.lock
+	rm -f target
+	rm -f *.dot
+	rm -f *.png
+	rm -f *.iloc
 
 test: # only works with test data dir
 	cargo test --features onlylex 							--no-default-features --test test-etapa1 -- --nocapture

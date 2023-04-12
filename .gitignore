@@ -35,9 +35,10 @@ Cargo.lock
 ## Ignoring c examples
 **/c_examples
 
-## Ignore dot and png files
+## Ignore dot, png and iloc files
 *.dot
 *.png
+*.iloc
 
 ## Don't ignore examples
 !**/examples/*
