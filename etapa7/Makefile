@@ -29,8 +29,10 @@ zip:
 
 ex1: main
 	./etapa7 < examples/ex1 > ex1.dot
+	mv out.iloc ex1.iloc
 	dot -Tpng ex1.dot -o ex1.png
 
 ex2: main
 	./etapa7 < examples/ex2 > ex2.dot
+	mv out.iloc ex2.iloc
 	dot -Tpng ex2.dot -o ex2.png

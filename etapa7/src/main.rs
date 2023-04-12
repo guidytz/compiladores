@@ -66,6 +66,14 @@ fn main() -> ExitCode {
                 {
                     let graph = build_graph(tree.code());
                     print_graph(graph);
+                    std::fs::write(
+                        "out.iloc",
+                        tree.code()
+                            .into_iter()
+                            .map(|inst| inst.code_str())
+                            .collect::<String>(),
+                    )
+                    .unwrap();
                 }
 
                 #[cfg(not(feature = "code"))]
