@@ -1,0 +1,12 @@
+int a;
+int main()
+{
+    a = 2;
+    int b <= 3, c;
+    b = b - 2;
+    if (b >= a)then {
+            c = 2;
+    } else {
+        c = 1;
+    };
+}

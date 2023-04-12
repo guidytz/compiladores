@@ -34,3 +34,10 @@ Cargo.lock
 
 ## Ignoring c examples
 **/c_examples
+
+## Ignore dot and png files
+*.dot
+*.png
+
+## Don't ignore examples
+!**/examples/*
