@@ -105,12 +105,9 @@ pub fn build_graph(code: Vec<IlocInst>) -> Vec<FluxCtrlGraphNode> {
         curr += 1;
         next += 1;
     }
-    // graph.windows(2).map(|&mut window| {
-    // });
     graph
 }
 
-#[cfg(feature = "code")]
 fn find_leaders(code: &[IlocInst]) -> Vec<usize> {
     let mut leader_set = std::collections::HashSet::new();
     leader_set.extend([0, 7]); // adding first inst and return from main
